@@ -1,5 +1,5 @@
 from ursina import *
-from src.entidades.entorno import Plataforma, PlataformaMovil
+from src.entidades.entorno import Plataforma, PlataformaMovil, Teletransportador
 
 class Barril(Entity):
     todos_los_barriles = [] # Lista de todos los barriles activos para ignorar colisiones entre ellos
@@ -29,7 +29,7 @@ class Barril(Entity):
         self.modo_rebote3d = modo_rebote3d
         
         # Barril dorado es más rápido, fuego medio, normal lento
-        self.speed = 12.0 if super_barril else (15.0 if es_dorado else (10.0 if es_fuego else 8.0))
+        self.speed = 12.0 if super_barril else (10.0 if es_dorado else (10.0 if es_fuego else 8.0))
         
         # NUEVO SISTEMA VECTORIAL (como en prueba.py)
         if self.modo_rebote3d:
@@ -64,8 +64,12 @@ class Barril(Entity):
         if self.velocidad.y < 0:
             distancia_rayo += abs(self.velocidad.y * time.dt) + 1.0
 
-        # Ignoramos al jugador y a TODOS los demás barriles
+        # Ignoramos al jugador, barriles, ítems y teletransportadores
+        from src.entidades.bono import Bono, BonoMartillo
         lista_ignorar = list(Barril.todos_los_barriles)
+        lista_ignorar += list(Bono.todos)
+        lista_ignorar += list(BonoMartillo.todos)
+        lista_ignorar += list(Teletransportador.todos)
         if self.jugador_ref and hasattr(self.jugador_ref, 'controller'):
             lista_ignorar.append(self.jugador_ref.controller)
         
@@ -203,6 +207,6 @@ class BarrilSpawner(Entity):
                    es_fuego=es_fuego, es_dorado=es_dorado, modo_rebote3d=self.modo_rebote3d)
                    
             if self.modo_rebote3d:
-                self.tiempo_restante = random.uniform(0.8, 1.8)
+                self.tiempo_restante = random.uniform(1.2, 2.0)
             else:
-                self.tiempo_restante = 3.0
+                self.tiempo_restante = 1.8

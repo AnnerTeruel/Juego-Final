@@ -117,6 +117,7 @@ class Escalera(Entity):
         )
 
 class Teletransportador(Entity):
+    todos = []
     def __init__(self, position, destino, scale=(3, 3, 3)):
         super().__init__(
             model='sphere',
@@ -126,6 +127,11 @@ class Teletransportador(Entity):
             scale=scale
         )
         self.destino = destino
+        Teletransportador.todos.append(self)
+
+    def on_destroy(self):
+        if self in Teletransportador.todos:
+            Teletransportador.todos.remove(self)
         
     def update(self):
         self.rotation_y += 100 * time.dt

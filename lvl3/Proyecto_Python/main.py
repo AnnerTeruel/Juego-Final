@@ -197,6 +197,14 @@ def iniciar_cinematica_jefe():
             manager.jugador.activar(False)
             camera.parent = scene
             
+            # Detener el spawner de la intro para que no haya saltos del jefe durante la cinemática final
+            if hasattr(manager, 'spawner') and manager.spawner:
+                manager.spawner.activo = False
+            
+            # Limpiar base_y_original para que el spawner 3D calcule la altura correcta
+            if hasattr(manager, 'jefe') and hasattr(manager.jefe, 'base_y_original'):
+                del manager.jefe.base_y_original
+            
             # Ocultar HUD y arma para que parezca una cámara cinematográfica
             if manager.jugador.tiene_martillo:
                 manager.jugador.martillo_pivot.visible = False
@@ -294,7 +302,8 @@ def iniciar_cinematica_jefe():
                         manager.jefe.animate_position((0, 101, 121), duration=0.5, curve=curve.out_quad)
                         camera.shake(duration=0.5, magnitude=3.0)
                         
-                # Esperar a que las plataformas terminen de moverse (+0.3s extra sobre retraso)
+                # retraso apunta al instante del último invoke de plataforma.
+                # Las animaciones de plataforma duran 0.2s, así que esperamos eso + 0.6s extra.
                 invoke(caer_jefe, delay=retraso + 0.8)
                     
                 # 6. Lanzamiento del JUGADOR (cámara fija mirando al jefe durante todo el vuelo)

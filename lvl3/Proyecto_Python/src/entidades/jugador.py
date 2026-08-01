@@ -36,12 +36,20 @@ class Jugador:
             text='MARTILLO: INACTIVO', 
             position=(0.85, 0.45), 
             origin=(0.5, 0.5), 
-            scale=2, 
+            scale=2,
             color=color.orange
         )
-        self.martillo_pivot = Entity(parent=camera, position=(0.6, -0.4, 1.2), visible=False)
-        self.martillo_mango = Entity(parent=self.martillo_pivot, model='cube', scale=(0.1, 1.2, 0.1), color=color.brown, y=0.6)
-        self.martillo_cabeza = Entity(parent=self.martillo_pivot, model='cube', scale=(0.4, 0.3, 0.6), color=color.light_gray, y=1.2)
+        self.martillo_pivot = Entity(parent=camera, position=(0.83, -1.02, 0.81), visible=False)
+        self.martillo_rotador = Entity(
+            parent=self.martillo_pivot,
+            rotation=(-189, 103, 188)
+        )
+        self.martillo_modelo = Entity(
+            parent=self.martillo_rotador,
+            model='assets/Models/toy_hammer.glb',
+            scale=0.0015,
+            y=1.34  # Desplaza el modelo para que el pivote quede en la base del mango
+        )
         self.atacando = False
 
         # ESTAMINA
@@ -212,3 +220,8 @@ class Jugador:
         destroy(self.barra_estamina)
         destroy(self.lbl_estamina)
         destroy(self.helper)
+        if hasattr(self, 'martillo_modelo'):
+            destroy(self.martillo_modelo)
+        if hasattr(self, 'martillo_rotador'):
+            destroy(self.martillo_rotador)
+        destroy(self.martillo_pivot)

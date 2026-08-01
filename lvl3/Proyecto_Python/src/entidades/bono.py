@@ -1,6 +1,7 @@
 from ursina import *
 
 class Bono(Entity):
+    todos = []
     def __init__(self, position, jugador_ref, multiplicador=2):
         super().__init__(
             model='cube',
@@ -13,6 +14,11 @@ class Bono(Entity):
         self.multiplicador = multiplicador
         self.jugador_ref = jugador_ref
         self.activo = True
+        Bono.todos.append(self)
+
+    def on_destroy(self):
+        if self in Bono.todos:
+            Bono.todos.remove(self)
 
     def update(self):
         self.rotation_y += 50 * time.dt
@@ -38,6 +44,7 @@ class Bono(Entity):
             destroy(self)
 
 class BonoMartillo(Entity):
+    todos = []
     def __init__(self, position, jugador_ref):
         super().__init__(
             model='cube',
@@ -49,6 +56,11 @@ class BonoMartillo(Entity):
         )
         self.jugador_ref = jugador_ref
         self.activo = True
+        BonoMartillo.todos.append(self)
+
+    def on_destroy(self):
+        if self in BonoMartillo.todos:
+            BonoMartillo.todos.remove(self)
 
     def update(self):
         self.rotation_y += 50 * time.dt
