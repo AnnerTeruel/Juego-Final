@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gran Final - Copa Mundial 2026</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            padding: 2rem 1rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid #eab308;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            color: #facc15;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        main {
+            max-width: 800px;
+            width: 90%;
+            margin: 2rem auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Marcador de Partido */
+        .scoreboard {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .flag {
+            font-size: 3rem;
+        }
+
+        .team-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #facc15;
+            background: #0f172a;
+            padding: 0.5rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        /* Sección de detalles */
+        .details-card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            border: 1px solid #334155;
+        }
+
+        .details-card h2 {
+            color: #facc15;
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+
+        .timeline {
+            list-style: none;
+        }
+
+        .timeline li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .timeline li:last-child {
+            border-bottom: none;
+        }
+
+        .minute {
+            color: #eab308;
+            font-weight: bold;
+        }
+
+        /* Botón de interacción */
+        .action-area {
+            text-align: center;
+        }
+
+        .btn-live {
+            background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%);
+            color: #0f172a;
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);
+        }
+
+        .btn-live:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(234, 179, 8, 0.5);
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 1.5rem;
+            color: #64748b;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="hero-title">🏆 La Gran Final Mundialista 🏆</h1>
+        <p class="subtitle">Servidor Web en Python — Cobertura en Vivo</p>
+    </header>
+
+    <main>
+        <!-- Marcador Principal -->
+        <section class="scoreboard">
+            <div class="team">
+                <span class="flag">🇦🇷</span>
+                <span class="team-name">Argentina</span>
+            </div>
+
+            <div class="score">3 - 3</div>
+
+            <div class="team">
+                <span class="flag">🇫🇷</span>
+                <span class="team-name">Francia</span>
+            </div>
+        </section>
+
+        <!-- Incidencias del Partido -->
+        <section class="details-card">
+            <h2>⏱️ Eventos Destacados del Partido</h2>
+            <ul class="timeline">
+                <li><span>⚽ Gol de Messi (Penal)</span> <span class="minute">23'</span></li>
+                <li><span>⚽ Gol de Ángel Di María</span> <span class="minute">36'</span></li>
+                <li><span>⚽ Gol de Kylian Mbappé (Penal)</span> <span class="minute">80'</span></li>
+                <li><span>⚽ Gol de Kylian Mbappé</span> <span class="minute">81'</span></li>
+                <li><span>⚽ Gol de Messi</span> <span class="minute">108'</span></li>
+                <li><span>⚽ Gol de Kylian Mbappé (Penal)</span> <span class="minute">118'</span></li>
+            </ul>
+        </section>
+
+        <!-- Botón interactivo -->
+        <div class="action-area">
+            <button class="btn-live" onclick="alert('🏆 ¡Argentina campeón del mundo en tanda de penales (4-2)!')">
+                Ver Resultado Final en Penales
+            </button>
+        </div>
+    </main>
+
+    <footer>
+        <p>Servidor Web Estático local ejecutado con <code>python -m http.server 8000</code></p>
+    </footer>
+
+</body>
+</html>
