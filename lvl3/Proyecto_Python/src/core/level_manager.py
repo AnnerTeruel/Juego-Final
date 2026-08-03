@@ -168,3 +168,9 @@ class LevelManager:
             # MINIMAPA
             # ----------------------------------------------------------
             self.minimapa = MiniMapa(self.jugador, getattr(self, 'jefe', None))
+
+    def siguiente_nivel(self):
+        """Maneja la transición al siguiente nivel o reinicia si es el último."""
+        print("Presionaste 'P': Reiniciando nivel actual (demo lvl3)...")
+        # En este caso, como solo tenemos el nivel 3 en esta demo, lo recargamos
+        self.cargar_nivel(3)

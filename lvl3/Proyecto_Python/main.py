@@ -75,9 +75,9 @@ def input(key):
                 manager.jugador.texto_martillo.color = color.orange if not manager.jugador.tiene_martillo else color.red
 
     if key == 'p' and not menu_pausa.pausa_activa:
-        # PRUEBA ESPECIAL A PEDIDO
-        if manager.jugador and not cinematica_jefe.fase_iniciada:
-            cinematica_jefe.iniciar()
+        # Delegar el cambio de nivel/estado al LevelManager
+        if manager.jugador:
+            manager.siguiente_nivel()
 
 # ==========================================================
 # UPDATE
