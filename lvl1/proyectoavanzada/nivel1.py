@@ -43,6 +43,25 @@ en_intro = False
 texto_intro = None
 victoria_cinematica = False
 
+def reproducir_clic():
+    try:
+        # Ursina (Panda3D) cachea el archivo automáticamente. 
+        # Crear una nueva instancia cada vez permite que el sonido se solape y suene siempre al 100%.
+        Audio('assets/clic.wav', autoplay=True, loop=False, volume=1.0, ignore_paused=True)
+    except:
+        pass
+
+def reproducir_destruir_barril():
+    try:
+        Audio('assets/destruir.wav', autoplay=True, loop=False, volume=1.0, ignore_paused=True)
+    except:
+        pass
+
+def accion_salir():
+    reproducir_clic()
+    application.paused = False # Asegurar que el juego corra para procesar el delay
+    invoke(application.quit, delay=0.25) # Delay para dejar que el sonido se escuche antes de cerrar
+
 # ==========================================
 # GAME MANAGER (Estado y UI)
 # ==========================================
@@ -55,10 +74,11 @@ class GameManager(Entity):
         self.tiempo_martillo = 0.0
         self.temporizador_puntos = PENALIZACION_TIEMPO
         self.muerto = False
+        self.juego_terminado = False
         
-        self.texto_ui = Text(text='', position=(-0.85, 0.45), scale=2, color=color.white)
-        self.texto_salud = Text(text='', position=(-0.85, 0.40), scale=2, color=color.red)
-        self.texto_coords = Text(text='', position=(-0.85, 0.35), scale=1.5, color=color.rgba(100, 220, 255, 200))
+        self.texto_ui = Text(text='', position=(-0.85, 0.45), scale=1.2, color=color.white)
+        self.texto_salud = Text(text='', position=(-0.85, 0.41), scale=1.2, color=color.red)
+        self.texto_coords = Text(text='', position=(-0.85, 0.37), scale=1.0, color=color.rgba(100, 220, 255, 200))
         
         self.actualizar_ui()
 
@@ -78,25 +98,39 @@ class GameManager(Entity):
         self.actualizar_ui()
 
     def recibir_dano(self, cantidad):
-        if self.muerto: return
+        if self.muerto or getattr(self, 'juego_terminado', False): return
         self.salud_jugador -= cantidad
         self.actualizar_ui()
         if self.salud_jugador <= 0:
             self.morir()
             
     def morir(self):
-        if getattr(self, 'muerto', False): return
+        if getattr(self, 'muerto', False) or getattr(self, 'juego_terminado', False): return
         self.muerto = True
+        self.juego_terminado = True
         
         if 'jugador' in globals():
             jugador.speed = 0
             jugador.jump_height = 0
+            if hasattr(jugador, 'martillo_visual') and jugador.martillo_visual:
+                jugador.martillo_visual.enabled = False
+            if hasattr(jugador, 'reticula_mira') and jugador.reticula_mira:
+                jugador.reticula_mira.enabled = False
             
         mouse.locked = False
         
-        # Animación de desmayo (cae la cámara hacia un lado)
-        camera.animate_rotation((0, 0, 90), duration=1.0, curve=curve.out_bounce)
+        # 1. Hit-Stop y Temblor para dar impacto a la muerte
+        import time as pytime
+        pytime.sleep(0.1)
+        camera.shake(duration=0.5, magnitude=0.05)
         
+        # 2. Animación de desmayo (cae la cámara hacia atrás y a un lado de forma realista)
+        camera.animate_rotation((-20, 0, 80), duration=1.2, curve=curve.out_bounce)
+        camera.animate_position((0, -1.0, -0.5), duration=1.0, curve=curve.out_quad)
+        
+        # Efecto de viñeta/flash rojo al morir para más impacto visual
+        Entity(parent=camera.ui, model='quad', color=color.rgba(255, 0, 0, 150), scale=(2,2), z=-1).animate_color(color.rgba(255, 0, 0, 0), duration=1.5, curve=curve.out_expo)
+                
         # Llamar al Game Over con retraso
         invoke(menu_game_over.mostrar, delay=1.5)
 
@@ -144,6 +178,7 @@ class GameManager(Entity):
         self.tiempo_martillo = 0.0
         self.temporizador_puntos = PENALIZACION_TIEMPO
         self.muerto = False
+        self.juego_terminado = False
         camera.rotation = (0, 0, 0)
         
         # Limpiar efectos visuales del jugador al reiniciar
@@ -167,29 +202,63 @@ class Jugador(FirstPersonController):
         # FOV Natural FPS (75) para evitar distorsión visual
         camera.fov = 75
         
-        self.cursor.color = color.red
-        self.cursor.visible = False # Cursor deshabilitado para evitar el punto rojo marcador en el centro
+        self.cursor.enabled = False # Deshabilitamos el cursor nativo para evitar conflictos
+        
+        # Retícula personalizada independiente que siempre será visible
+        self.reticula_mira = Entity(
+            parent=camera.ui,
+            model='circle',
+            color=color.red,
+            scale=0.015,
+            position=(0, 0),
+            z=-1 # Asegura que esté por encima de otros elementos
+        )
         self.mouse_sensitivity = Vec2(40, 40)
         self.en_escalera = False
         self.ultimo_dano_tiempo = 0
+        
+        # Precargar sonido de salto
+        try:
+            self.sonido_salto = Audio('assets/saltar.wav', autoplay=False, loop=False)
+        except:
+            self.sonido_salto = None
 
     def restaurar_color(self):
         pass
 
     def input(self, key):
+        # Reproducir sonido de salto si tocamos la barra espaciadora y tocamos suelo
+        if key == 'space':
+            if hasattr(self, 'sonido_salto') and self.sonido_salto:
+                if getattr(self, 'grounded', True):
+                    try:
+                        self.sonido_salto.play()
+                    except:
+                        pass
+                        
         super().input(key)
-        
-        # Swing manual opcional (aunque se anima solo)
+        # Swing manual del martillo (Click Izquierdo)
         if key == 'left mouse down' and getattr(game_manager, 'martillo_activo', False):
+            # Reproducir sonido del martillo
+            try:
+                Audio('assets/mover.mp3-_1_.wav', autoplay=True, loop=False)    
+            except:
+                pass
+                
             if hasattr(self, 'martillo_visual') and self.martillo_visual and getattr(self.martillo_visual, 'enabled', False):
                 try:
-                    self.martillo_visual.animate_rotation((100, 0, -20), duration=0.15)
+                    # Animación Premium: Anticipación y golpe pesado (hacia abajo y adentro)
+                    self.martillo_visual.animate_rotation((110, -30, -10), duration=0.15, curve=curve.in_out_expo)
+                    self.martillo_visual.animate_position((0.3, -0.7, 1.0), duration=0.15, curve=curve.in_out_expo)
+                    
                     def revertir():
                         if hasattr(self, 'martillo_visual') and self.martillo_visual:
                             try:
-                                self.martillo_visual.animate_rotation((30, 0, -20), duration=0.2)
+                                # Regreso suave a la posición inicial
+                                self.martillo_visual.animate_rotation((30, 0, -20), duration=0.3, curve=curve.out_sine)
+                                self.martillo_visual.animate_position((0.5, -0.5, 0.8), duration=0.3, curve=curve.out_sine)
                             except: pass
-                    invoke(revertir, delay=0.15)
+                    invoke(revertir, delay=0.18)
                 except: pass
             
             # Destruir barriles frente a nosotros manualmente
@@ -197,13 +266,25 @@ class Jugador(FirstPersonController):
                 if distance(self, b) < 4.0:
                     game_manager.agregar_puntos(PUNTOS_POR_BARRIL)
                     TextoFlotante(f'+{PUNTOS_POR_BARRIL}', b.position + Vec3(0, 1, 0))
-                    crear_explosion(b.position, textura='barril_texture')
+                    crear_explosion(b.position, textura='assets/barrel_albedo.png')
+                    reproducir_destruir_barril()
                     destroy(b)
+                    camera.shake(duration=0.15, magnitude=0.03) # Temblor de pantalla ligero al impactar un barril
 
     def reiniciar(self):
         self.position = POSICION_INICIAL_JUGADOR
         self.rotation = Vec3(0, 90, 0)
         self.camera_pivot.rotation_x = 0
+        
+        # Restaurar cámara global al jugador (corrige bugs de cámara torcida tras morir o derrotar jefe)
+        camera.parent = self.camera_pivot
+        camera.position = (0, 0, 0)
+        camera.rotation = (0, 0, 0)
+        
+        # Bloquear el cursor nuevamente para jugar en primera persona
+        mouse.locked = True
+        mouse.visible = False
+        
         self.color = COLOR_JUGADOR_NORMAL
         self.gravity = 1
         self.velocity_y = 0 # Prevenir que siga cayendo si murió en el aire
@@ -222,15 +303,7 @@ class Jugador(FirstPersonController):
         super().update()
         
         # (El modelo visual y animaciones fueron removidas para mantener el modo primera persona puro)
-        # Animación automática del martillo clásico
-        if getattr(game_manager, 'martillo_activo', False) and hasattr(self, 'martillo_visual') and self.martillo_visual.enabled:
-            swing = math.sin(time.time() * 12) * 45
-            if globals().get('vista_cinematica', False):
-                self.martillo_visual.rotation_x = swing
-                self.martillo_visual.rotation_z = -45
-            else:
-                self.martillo_visual.rotation_x = 30 + swing
-                self.martillo_visual.rotation_z = -20
+        # El martillo ahora es 100% manual (controlado por clics), no requiere animación automática aquí.
 
         # Detección de escaleras
         self.en_escalera = False
@@ -282,10 +355,18 @@ class Jugador(FirstPersonController):
             game_manager.morir()
 
     def recibir_dano(self):
+        if getattr(game_manager, 'muerto', False) or getattr(game_manager, 'juego_terminado', False):
+            return
         if time.time() - self.ultimo_dano_tiempo < 0.5:
             return
         self.ultimo_dano_tiempo = time.time()
         
+        # Reproducir sonido de daño
+        try:
+            Audio('assets/Sonido de daño  -  Minecraft.wav', autoplay=True, loop=False)
+        except:
+            pass
+            
         game_manager.recibir_dano(DAÑO_BARRIL)
         self.color = color.white
         invoke(setattr, self, 'color', COLOR_JUGADOR_NORMAL, delay=0.2)
@@ -293,6 +374,7 @@ class Jugador(FirstPersonController):
 # ==========================================
 # SISTEMA DE PARTÍCULAS (VOXELS ESTILO PIXELS)
 # ==========================================
+
 class Particula(Entity):
     def __init__(self, posicion, textura=None):
         if textura:
@@ -422,7 +504,8 @@ class Barril(Entity):
             color=color.white,
             scale=1.0,
             shader=lit_with_shadows_shader,
-            rotation_x=90
+            rotation_x=90,
+            double_sided=True
         )
         
         Barril.instancias.append(self)
@@ -463,16 +546,11 @@ class Barril(Entity):
         centro_jugador = jugador.position + Vec3(0, 1.0, 0)
         dist = distance(self.position, centro_jugador)
         
-        if dist < 1.3 or (getattr(game_manager, 'martillo_activo', False) and dist < 2.5): 
-            if game_manager.martillo_activo:
-                game_manager.agregar_puntos(PUNTOS_POR_BARRIL)
-                TextoFlotante(f'+{PUNTOS_POR_BARRIL}', self.position + Vec3(0, 1, 0))
-                crear_explosion(self.position, textura='barril_texture')
-                destroy(self)
-                return
-            else:
-                jugador.recibir_dano()
-                self.x += (self.dir * -1) * 2.0 
+        # El barril solo te hace daño si te toca (distancia < 1.3) y NO estás en una escalera.
+        # Ya no se destruye solo por tener el martillo activo, debes golpearlo manualmente.
+        if dist < 1.3 and not getattr(jugador, 'en_escalera', False):
+            jugador.recibir_dano()
+            self.x += (self.dir * -1) * 2.0 
 
         if self.y < -15:
             destroy(self)
@@ -483,6 +561,7 @@ class Secuaz(Entity):
             position=position, 
             collider='box'
         )
+        self.base_y = position[1]
         
         # 1. Instanciar la entidad cargando el GLB con Actor de Panda3D
         try:
@@ -502,14 +581,36 @@ class Secuaz(Entity):
             self.anim_name = None
 
         self.derrotado = False
+        self.salud = SALUD_JEFE
         self.barril_lanzado = False # Para no lanzar múltiples veces en el mismo ciclo
         self.animacion_iniciada = False
         self.fase2 = False
+        self.invulnerable = False
+        
+        # Interfaz del Jefe (Premium UI) - Ubicada abajo para no tapar cámara ni HUD
+        self.ui_jefe = Entity(parent=camera.ui, enabled=False)
+        self.ui_fondo = Entity(parent=self.ui_jefe, model='quad', color=color.dark_gray, scale=(0.5, 0.03), position=(0, -0.40))
+        # Fondo oscuro para la vida perdida
+        Entity(parent=self.ui_fondo, model='quad', color=color.black, scale=(0.99, 0.8), position=(0, 0, 0.005))
+        # Barra principal roja
+        self.ui_barra = Entity(parent=self.ui_fondo, model='quad', color=color.red, scale=(0.99, 0.8), position=(0, 0, -0.01))
+        self.ui_barra.origin = (-0.5, 0) # Anclar a la izquierda
+        self.ui_barra.x = -0.495 
+        
+        # Texto centrado sobre la barra inferior
+        self.ui_texto = Text(parent=self.ui_jefe, text="GORILA SECUAZ", scale=1.3, position=(0, -0.37), origin=(0, 0), color=color.gold)
         
     def update(self):
         if application.paused or self.derrotado or ('en_intro' in globals() and en_intro): return
         
         if not self.actor or not self.anim_name: return
+        
+        # Mostrar la barra de vida solo si el jugador está en la última plataforma y de frente
+        if 'jugador' in globals() and jugador.y > 83.0 and distance(self.position, jugador.position) < 25:
+            if not self.ui_jefe.enabled:
+                self.ui_jefe.enabled = True
+        else:
+            self.ui_jefe.enabled = False
 
         # Lógica de fase 2 para aumentar dificultad (acelerar animación)
         if not self.fase2 and 'jugador' in globals() and jugador.y > 30:
@@ -520,11 +621,15 @@ class Secuaz(Entity):
         if 'jugador' in globals():
             distancia = distance(self.position, jugador.position)
             
-            # Hacer que el secuaz apunte siempre al jugador en el eje horizontal
-            self.look_at_2d(jugador.position, 'y')
-            # Ajuste de rotación por si el modelo de Blender está exportado de espaldas o de lado. 
-            # Si el gorila te da la espalda, cambia este 180 a 0 o 90.
-            self.rotation_y += 180
+            # Giro suave y fluido hacia el jugador en lugar de un salto brusco (look_at instantáneo)
+            dx = jugador.x - self.x
+            dz = jugador.z - self.z
+            target_yaw = math.degrees(math.atan2(dx, dz)) + 180
+            diff = (target_yaw - self.rotation_y + 180) % 360 - 180
+            self.rotation_y += diff * time.dt * 6.0
+            
+            # Animación de respiración (rebote suave) para que se vea más orgánico y vivo
+            self.y = self.base_y + math.sin(time.time() * 5.0) * 0.15
         else:
             distancia = 100
 
@@ -547,7 +652,7 @@ class Secuaz(Entity):
             # 1. Mostrar barril falso en las manos al iniciar el ciclo (antes del frame 5)
             if frame_actual < 5 and not getattr(self, 'barril_falso_visible', False):
                 panda_barrel_falso = application.base.loader.loadModel('assets/spiked_barrel.obj')
-                self.barril_falso = Entity(parent=self, model=panda_barrel_falso, texture='assets/barrel_albedo.png', color=color.white, y=1.5, z=-0.8, scale=0.8, rotation_x=90, shader=lit_with_shadows_shader)
+                self.barril_falso = Entity(parent=self, model=panda_barrel_falso, texture='assets/barrel_albedo.png', color=color.white, y=1.5, z=-0.8, scale=0.8, rotation_x=90, shader=lit_with_shadows_shader, double_sided=True)
                 self.barril_falso_visible = True
                 self.barril_lanzado = False
             
@@ -580,50 +685,85 @@ class Secuaz(Entity):
         Barril(position=self.position + Vec3(0, -1, offset_z))
 
     def recibir_dano(self):
-        if self.derrotado: return
+        if self.derrotado or getattr(self, 'invulnerable', False): return
+        
+        self.salud -= 1
+        self.invulnerable = True
+        
+        def quitar_invulnerabilidad():
+            self.invulnerable = False
+            if hasattr(self, 'actor') and self.actor:
+                self.actor.setColorScale(1, 1, 1, 1) # Restaurar color original
+                
+        invoke(quitar_invulnerabilidad, delay=0.5) 
+        
+        # Actualizar la barra de vida visualmente con animación
+        porcion = max(0.0, self.salud / SALUD_JEFE)
+        self.ui_barra.animate_scale_x(0.99 * porcion, duration=0.3, curve=curve.out_expo)
+        self.ui_barra.color = color.white # Destello blanco al recibir daño
+        invoke(setattr, self.ui_barra, 'color', color.red, delay=0.15)
+        
+        if self.salud > 0:
+            # Feedback de golpe no letal
+            TextoFlotante(f"¡OUCH! Le quedan {self.salud}", self.position + Vec3(0, 2, -1), color_texto=color.orange)
+            crear_explosion(self.position + Vec3(0, 1, -1)) 
+            
+            # Pintar de rojo el modelo para indicar daño
+            if hasattr(self, 'actor') and self.actor:
+                self.actor.setColorScale(1, 0.2, 0.2, 1)
+                
+            # Puntos por acertar
+            game_manager.agregar_puntos(500)
+            return
+
         self.derrotado = True
+        self.ui_jefe.enabled = False # Ocultar la barra al derrotarlo
+        game_manager.juego_terminado = True # Bloqueo de estado: Ignorar daño al jugador
         
-        # SUPER GOLPE FINAL CINEMÁTICO (Epic Finisher)
-        time.time_scale = 0.2 # Slow motion brutal
+        if hasattr(self, 'actor') and self.actor:
+            self.actor.stop() # Detener animación
+            self.actor.hide() # 1. Eliminar presencia visual inmediatamente para evitar T-Pose flotante
+            
+        self.visible = False
+        if hasattr(self, 'barril_falso') and getattr(self, 'barril_falso', None):
+            self.barril_falso.visible = False
+            
+        # 1. HIT-STOP Inmediato para dar peso al golpe
+        import time as pytime
+        pytime.sleep(0.15)
         
-        # Explosión gigante y Texto
-        for _ in range(120): Particula(self.position)
-        TextoFlotante("¡GOLPE FINAL!", self.position + Vec3(0,4,0), color_texto=color.red)
-        
-        # El jefe sale volando
-        self.animate_rotation((360, 360, 360), duration=1.0)
-        self.animate_position(self.position + Vec3(0, 15, 20), duration=0.5, curve=curve.out_expo)
-        self.animate_y(-20, duration=0.5, delay=0.5, curve=curve.in_expo)
+        # 2. Lluvia de explosiones épica y muy rápida (Duración total: ~2 segundos)
+        # Gran explosión inicial
+        crear_explosion(self.position, textura='assets/barrel_albedo.png')
+        for _ in range(5):
+            crear_explosion(self.position + Vec3(random.uniform(-2,2), random.uniform(0,4), random.uniform(-2,2)))
+            
+        # Secuencia rápida de fuegos artificiales (20 explosiones en 2 segundos)
+        for i in range(20):
+            invoke(lambda: crear_explosion(self.position + Vec3(random.uniform(-5,5), random.uniform(2,10), random.uniform(-5,5))), delay=i*0.1)
+
+        # 3. Texto Épico rápido y directo
+        texto_victoria = Text(parent=camera.ui, text="¡JEFE DERROTADO!", scale=4, origin=(0,0), position=(0,0), color=color.rgba(255, 215, 0, 0))
+        texto_victoria.animate_color(color.rgba(255, 215, 0, 255), duration=0.3)
+        destroy(texto_victoria, delay=2.0)
         
         global victoria_cinematica
         victoria_cinematica = True
-        
-        # Cámara épica desprendida
-        camera.parent = scene
-        cam_pos = self.position + Vec3(-12, 5, -12)
-        camera.position = cam_pos
-        camera.look_at(self.position)
-        
-        # Zoom in y paneo dramático
-        camera.animate_position(cam_pos + Vec3(6, 2, 6), duration=1.0)
-        
         game_manager.agregar_puntos(BONUS_POR_SECUAZ)
         
-        # Detener barriles existentes para que no molesten en la cinemática
+        # 4. Limpieza agresiva de memoria y peligros
         for b in Barril.instancias:
             b.activo = False
+            # Destruir INMEDIATAMENTE para que no puedan tocar al jugador
+            destroy(b)
             
-        # Desactivar controles
+        # Desactivar controles inmediatamente
         jugador.speed = 0
         mouse.locked = False
         mouse.visible = True
-        
-        def fin_epic():
-            time.time_scale = 1.0
-            if 'menu_victoria' in globals():
-                menu_victoria.activar(game_manager.puntuacion)
             
-        invoke(fin_epic, delay=0.8)
+        # 5. Pasar inmediatamente al Menú de Victoria tras los 2 segundos de pirotecnia (Ritmo rápido)
+        invoke(lambda: menu_victoria.activar(game_manager.puntuacion), delay=2.2)
 
 # ==========================================
 # MENÚ DE VICTORIA ÉPICO
@@ -631,70 +771,98 @@ class Secuaz(Entity):
 class MenuVictoria(Entity):
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False, ignore_paused=True)
-        self.fondo = Entity(parent=self, model='quad', color=color.rgba(0, 0, 0, 0), scale=(2,2), z=1)
+        self.fondo = Entity(parent=self, model='quad', color=color.black, scale=(2,2), z=1)
+        self.fondo.alpha = 0
         
         # Textos con colores invisibles iniciales (alpha 0)
-        self.titulo = Text(parent=self, text='¡ENHORABUENA!', origin=(0,0), y=0.25, scale=4, color=color.rgba(255, 215, 0, 0))
-        self.mensaje1 = Text(parent=self, text='Has destruido al secuaz.', origin=(0,0), y=0.12, scale=2, color=color.rgba(255, 255, 255, 0))
-        self.mensaje2 = Text(parent=self, text='Esto es solo el comienzo de una gran aventura.', origin=(0,0), y=0.05, scale=1.5, color=color.rgba(200, 200, 200, 0))
+        self.titulo = Text(parent=self, text='¡ENHORABUENA!', origin=(0,0), y=0.25, scale=4, color=color.gold)
+        self.titulo.alpha = 0
+        self.mensaje1 = Text(parent=self, text='Has destruido al secuaz.', origin=(0,0), y=0.12, scale=2, color=color.white)
+        self.mensaje1.alpha = 0
+        self.mensaje2 = Text(parent=self, text='Esto es solo el comienzo de una gran aventura.', origin=(0,0), y=0.05, scale=1.5, color=color.light_gray)
+        self.mensaje2.alpha = 0
         
-        self.pregunta = Text(parent=self, text='¿Deseas avanzar al segundo nivel?', origin=(0,0), y=-0.08, scale=1.8, color=color.rgba(100, 200, 255, 0))
-        self.puntos_text = Text(parent=self, text='', origin=(0,0), y=0.35, scale=1.2, color=color.rgba(255, 255, 255, 0))
+        self.pregunta = Text(parent=self, text='¿Deseas avanzar al segundo nivel?', origin=(0,0), y=-0.08, scale=1.8, color=color.cyan)
+        self.pregunta.alpha = 0
+        self.puntos_text = Text(parent=self, text='', origin=(0,0), y=0.35, scale=1.2, color=color.white)
+        self.puntos_text.alpha = 0
         
-        # Botones (escondidos inicialmente)
-        self.btn_siguiente = Button(parent=self, text='Avanzar a Nivel 2', color=color.rgba(0,100,255,0), highlight_color=color.rgba(0,150,255,255), scale=(0.35, 0.08), y=-0.22, origin=(0,0))
-        self.btn_siguiente.text_entity.scale = 1.2
-        self.btn_siguiente.text_entity.color = color.rgba(255, 255, 255, 0)
+        # Botones (escondidos inicialmente) - Colores oscurecidos para mayor contraste con el texto blanco
+        self.btn_siguiente = Button(parent=self, text='Avanzar a Nivel 2', color=color.rgba(0, 0.2, 0.7, 0), highlight_color=color.rgba(0, 0.4, 1.0, 1), scale=(0.35, 0.08), y=-0.22, origin=(0,0))
+        # Se elimina el text_entity.scale manual porque distorsiona el tamaño en Ursina
+        self.btn_siguiente.text_entity.color = color.rgba(1, 1, 1, 0)
         self.btn_siguiente.on_click = self.accion_siguiente
         
-        self.btn_reiniciar = Button(parent=self, text='Reiniciar Nivel 1', color=color.rgba(100,100,100,0), highlight_color=color.rgba(150,150,150,255), scale=(0.25, 0.06), x=-0.15, y=-0.35, origin=(0,0))
-        self.btn_reiniciar.text_entity.color = color.rgba(255, 255, 255, 0)
+        self.btn_reiniciar = Button(parent=self, text='Reiniciar Nivel 1', color=color.rgba(0.2, 0.2, 0.2, 0), highlight_color=color.rgba(0.4, 0.4, 0.4, 1), scale=(0.25, 0.06), x=-0.15, y=-0.35, origin=(0,0))
+        self.btn_reiniciar.text_entity.color = color.rgba(1, 1, 1, 0)
         self.btn_reiniciar.on_click = self.accion_reiniciar
         
-        self.btn_salir = Button(parent=self, text='Salir del Juego', color=color.rgba(200,0,0,0), highlight_color=color.rgba(255,50,50,255), scale=(0.25, 0.06), x=0.15, y=-0.35, origin=(0,0))
-        self.btn_salir.text_entity.color = color.rgba(255, 255, 255, 0)
-        self.btn_salir.on_click = application.quit
+        self.btn_salir = Button(parent=self, text='Salir del Juego', color=color.rgba(0.6, 0, 0, 0), highlight_color=color.rgba(0.9, 0.1, 0.1, 1), scale=(0.25, 0.06), x=0.15, y=-0.35, origin=(0,0))
+        self.btn_salir.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_salir.on_click = accion_salir
 
     def activar(self, puntuacion):
+        if 'menu_game_over' in globals(): menu_game_over.enabled = False
         self.enabled = True
         mouse.locked = False
         mouse.visible = True
         
-        # Resetear textos si se vuelve a jugar
-        self.pregunta.text = '¿Deseas avanzar al segundo nivel?'
-        self.pregunta.color = color.rgba(100, 200, 255, 0)
+        # Reproducir sonido de victoria y detener soundtrack
+        try:
+            if 'soundtrack' in globals() and soundtrack:
+                soundtrack.pause()
+            Audio('assets/Ganar.wav', autoplay=True, loop=False)
+        except:
+            pass
+            
+        # Resetear estado y textos si se vuelve a jugar
+        self.fondo.alpha = 0
+        self.titulo.alpha = 0
+        self.puntos_text.alpha = 0
+        self.mensaje1.alpha = 0
+        self.mensaje2.alpha = 0
+        self.pregunta.alpha = 0
+        self.btn_siguiente.color = color.rgba(0, 0.2, 0.7, 0)
+        self.btn_siguiente.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_reiniciar.color = color.rgba(0.2, 0.2, 0.2, 0)
+        self.btn_reiniciar.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_salir.color = color.rgba(0.6, 0, 0, 0)
+        self.btn_salir.text_entity.color = color.rgba(1, 1, 1, 0)
         
+        self.pregunta.text = '¿Deseas avanzar al segundo nivel?'
         self.puntos_text.text = f'PUNTUACIÓN FINAL: {puntuacion}'
         
-        # Secuencia épica de Fade-Ins
-        self.fondo.animate_color(color.rgba(0, 0, 0, 230), duration=2.0)
+        # Secuencia épica de Fade-Ins (Animando alpha)
+        self.fondo.animate_color(color.rgba(0, 0, 0, 0.9), duration=2.0)
         
-        self.titulo.animate_color(color.rgba(255, 215, 0, 255), duration=1.5, delay=0.5)
-        self.puntos_text.animate_color(color.rgba(255, 255, 255, 200), duration=1.5, delay=0.5)
+        self.titulo.animate('alpha', 1.0, duration=1.5, delay=0.5)
+        self.puntos_text.animate('alpha', 0.8, duration=1.5, delay=0.5)
         
-        self.mensaje1.animate_color(color.rgba(255, 255, 255, 255), duration=1.5, delay=1.5)
-        self.mensaje2.animate_color(color.rgba(200, 200, 200, 255), duration=1.5, delay=2.5)
+        self.mensaje1.animate('alpha', 1.0, duration=1.5, delay=1.5)
+        self.mensaje2.animate('alpha', 1.0, duration=1.5, delay=2.5)
         
-        self.pregunta.animate_color(color.rgba(100, 200, 255, 255), duration=1.5, delay=4.0)
+        self.pregunta.animate('alpha', 1.0, duration=1.5, delay=4.0)
         
         # Función para revelar botones
         def mostrar_botones():
-            self.btn_siguiente.animate_color(color.rgba(0, 100, 200, 255), duration=1.0)
-            self.btn_siguiente.text_entity.animate_color(color.rgba(255, 255, 255, 255), duration=1.0)
+            self.btn_siguiente.animate_color(color.rgba(0, 0.2, 0.7, 1), duration=1.0)
+            self.btn_siguiente.text_entity.animate_color(color.white, duration=1.0)
             
-            self.btn_reiniciar.animate_color(color.rgba(100, 100, 100, 255), duration=1.0)
-            self.btn_reiniciar.text_entity.animate_color(color.rgba(255, 255, 255, 255), duration=1.0)
+            self.btn_reiniciar.animate_color(color.rgba(0.2, 0.2, 0.2, 1), duration=1.0)
+            self.btn_reiniciar.text_entity.animate_color(color.white, duration=1.0)
             
-            self.btn_salir.animate_color(color.rgba(200, 0, 0, 255), duration=1.0)
-            self.btn_salir.text_entity.animate_color(color.rgba(255, 255, 255, 255), duration=1.0)
+            self.btn_salir.animate_color(color.rgba(0.6, 0, 0, 1), duration=1.0)
+            self.btn_salir.text_entity.animate_color(color.white, duration=1.0)
             
         invoke(mostrar_botones, delay=5.0)
 
     def accion_reiniciar(self):
+        reproducir_clic()
         self.enabled = False
-        reiniciar_juego()
+        invoke(reiniciar_juego, delay=0.1) # Retraso mínimo para permitir que el sonido inicie antes de congelar el juego
 
     def accion_siguiente(self):
+        reproducir_clic()
         # Como aún no hay nivel 2, damos un mensaje divertido/épico
         self.pregunta.text = "¡El Nivel 2 se encuentra en desarrollo! Muy pronto..."
         self.pregunta.color = color.rgba(255, 255, 0, 255)
@@ -706,7 +874,7 @@ class MenuVictoria(Entity):
 # ==========================================
 class Minimapa(Entity):
     def __init__(self):
-        super().__init__(parent=camera.ui, scale=(0.3, 0.4), position=(0.7, 0.25))
+        super().__init__(parent=camera.ui, scale=(0.18, 0.25), position=(0.75, 0.32))
         
         self.fondo = Entity(parent=self, model='quad', color=color.rgba(0, 0, 0, 150), z=1)
         self.borde = Entity(parent=self.fondo, model='quad', color=color.clear, scale=1.05, z=0.1)
@@ -788,35 +956,72 @@ class Minimapa(Entity):
 class MenuGameOver(Entity):
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False, ignore_paused=True)
-        self.fondo = Entity(parent=self, model='quad', color=color.rgba(0, 0, 0, 0), scale=(2,2))
-        self.mensaje = Text(parent=self, text='¡EL SECUAZ TE HA ALCANZADO!\nHas perdido el Nivel 1', origin=(0,0), y=0.1, scale=2.5, color=color.red)
+        self.fondo = Entity(parent=self, model='quad', color=color.black, scale=(2,2), z=1)
+        self.fondo.alpha = 0
         
-        self.btn_reiniciar = Button(parent=self, text='Reiniciar Nivel', y=-0.05, scale=(0.35, 0.08), on_click=self.accion_reiniciar, enabled=False)
-        self.btn_salir = Button(parent=self, text='Salir', y=-0.17, scale=(0.35, 0.08), on_click=application.quit, enabled=False)
-        self.btn_reiniciar.visible = False
-        self.btn_salir.visible = False
+        # Textos estilo "HAS MUERTO" (Dark Souls)
+        self.titulo = Text(parent=self, text='HAS MUERTO', origin=(0,0), y=0.15, scale=4.5, color=color.red)
+        self.titulo.alpha = 0
+        self.subtitulo = Text(parent=self, text='¡Los barriles te han alcanzado!', origin=(0,0), y=0.03, scale=1.5, color=color.light_gray)
+        self.subtitulo.alpha = 0
+        
+        # Botones Premium
+        self.btn_reiniciar = Button(parent=self, text='Volver a Intentarlo', color=color.rgba(0.4, 0.4, 0.4, 0), highlight_color=color.rgba(0.6, 0.6, 0.6, 1), scale=(0.3, 0.06), y=-0.15, origin=(0,0))
+        self.btn_reiniciar.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_reiniciar.on_click = self.accion_reiniciar
+        
+        self.btn_salir = Button(parent=self, text='Rendirse', color=color.rgba(0.6, 0, 0, 0), highlight_color=color.rgba(1, 0.2, 0.2, 1), scale=(0.3, 0.06), y=-0.25, origin=(0,0))
+        self.btn_salir.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_salir.on_click = accion_salir
 
     def mostrar(self):
+        if 'menu_victoria' in globals(): menu_victoria.enabled = False
         self.enabled = True
-        application.paused = True
+        
+        # Detener la música de fondo y reproducir sonido de derrota
+        try:
+            if 'soundtrack' in globals() and soundtrack:
+                soundtrack.pause()
+            Audio('assets/Perder.wav', autoplay=True, loop=False)
+        except:
+            pass
+            
+        # Eliminamos application.paused = True para que Ursina pueda ejecutar las animaciones
+        # y el invoke(). Al no pausar, se ve más épico porque el mundo sigue moviéndose (estilo Dark Souls).
         mouse.locked = False
         mouse.visible = True
-        self.fondo.color = color.rgba(0, 0, 0, 230)
-        self.btn_reiniciar.enabled = True
-        self.btn_reiniciar.visible = True
-        self.btn_salir.enabled = True
-        self.btn_salir.visible = True
-
-    def revelar_opciones(self):
-        self.fondo.color = color.rgba(0, 0, 0, 230)
-        self.btn_reiniciar.enabled = True
-        self.btn_reiniciar.visible = True
-        self.btn_salir.enabled = True
-        self.btn_salir.visible = True
+        
+        # Resetear alphas por si el jugador ya había muerto antes
+        self.fondo.alpha = 0
+        self.titulo.alpha = 0
+        self.subtitulo.alpha = 0
+        self.btn_reiniciar.color = color.rgba(0.4, 0.4, 0.4, 0)
+        self.btn_reiniciar.text_entity.color = color.rgba(1, 1, 1, 0)
+        self.btn_salir.color = color.rgba(0.6, 0, 0, 0)
+        self.btn_salir.text_entity.color = color.rgba(1, 1, 1, 0)
+        
+        # Fade In épico (Animando propiedad alpha en textos y color en quad/botones)
+        self.fondo.animate_color(color.rgba(0, 0, 0, 0.85), duration=1.0)
+        
+        def fade_in_textos():
+            self.titulo.animate('alpha', 1.0, duration=1.5)
+            self.titulo.animate_scale(4.8, duration=2.0)
+            invoke(lambda: self.subtitulo.animate('alpha', 1.0, duration=1.5), delay=0.8)
+        invoke(fade_in_textos, delay=0.2)
+        
+        # Revelar botones secuencialmente
+        def revelar_botones():
+            self.btn_reiniciar.animate_color(color.rgba(0.4, 0.4, 0.4, 1), duration=0.8)
+            self.btn_reiniciar.text_entity.animate_color(color.white, duration=0.8)
+            self.btn_salir.animate_color(color.rgba(0.6, 0, 0, 1), duration=0.8)
+            self.btn_salir.text_entity.animate_color(color.white, duration=0.8)
+            
+        invoke(revelar_botones, delay=2.0)
 
     def accion_reiniciar(self):
+        reproducir_clic()
         self.enabled = False
-        reiniciar_juego()
+        invoke(reiniciar_juego, delay=0.1)
 
 # ==========================================
 # INTERFAZ Y MENÚ DE PAUSA
@@ -828,24 +1033,40 @@ class MenuPausa(Entity):
         Text(parent=self, text='JUEGO PAUSADO', origin=(0,0), y=0.3, scale=2)
         Button(parent=self, text='Continuar', y=0.1, scale=(0.3, 0.08), on_click=self.reanudar)
         Button(parent=self, text='Reiniciar Nivel', y=0, scale=(0.3, 0.08), on_click=self.accion_reiniciar)
-        Button(parent=self, text='Salir', y=-0.1, scale=(0.3, 0.08), on_click=application.quit)
+        Button(parent=self, text='Salir', y=-0.1, scale=(0.3, 0.08), on_click=accion_salir)
 
     def alternar(self):
         if menu_game_over.enabled: return 
         self.enabled = not self.enabled
         application.paused = self.enabled
+        
+        # Pausar/Reanudar música de fondo (Usamos Volumen para evitar el bug de estática de archivos WAV grandes)
+        if 'soundtrack' in globals() and soundtrack:
+            if self.enabled:
+                soundtrack.volume = 0 # Silenciar en pausa
+            else:
+                soundtrack.volume = 0.5 # Restaurar volumen al reanudar
+                
+                
         if self.enabled:
             mouse.locked = False
             mouse.visible = True
+            if 'jugador' in globals() and hasattr(jugador, 'reticula_mira'):
+                jugador.reticula_mira.enabled = False
         else:
             mouse.locked = True
             mouse.visible = False
+            if 'jugador' in globals() and hasattr(jugador, 'reticula_mira'):
+                if not getattr(game_manager, 'muerto', False):
+                    jugador.reticula_mira.enabled = True
     def reanudar(self): 
+        reproducir_clic()
         self.alternar()
         
     def accion_reiniciar(self):
+        reproducir_clic()
         self.alternar()
-        reiniciar_juego()
+        invoke(reiniciar_juego, delay=0.1)
 
 # ==========================================
 # CONTROL GLOBAL Y REINICIO
@@ -880,60 +1101,86 @@ def mostrar_go():
     global texto_intro, en_intro
     if not texto_intro: return
     
+    try:
+        Audio('assets/Ready-Go-Effects..wav', autoplay=True, loop=False)
+    except:
+        pass
+        
     texto_intro.alpha = 1
-    texto_intro.text = '¡GO!'
-    texto_intro.color = color.green
-    texto_intro.scale = 5
-    texto_intro.animate_scale(8, duration=0.6, curve=curve.out_expo)
-    texto_intro.fade_out(value=0, duration=0.5, delay=0.5)
+    texto_intro.text = 'READY...'
+    texto_intro.color = color.orange
+    texto_intro.scale = 4
+    texto_intro.animate_scale(6, duration=0.8, curve=curve.out_expo)
     
-    # PASO 1: Posicionar al jugador (gravedad aún apagada)
-    jugador.gravity = 0
-    jugador.velocity_y = 0
-    jugador.speed = 0
-    jugador.jump_height = 0
-    jugador.position = POSICION_INICIAL_JUGADOR
-    jugador.rotation = Vec3(0, 0, 0)
-    jugador.camera_pivot.rotation = Vec3(0, 0, 0)
-    
-    invoke(destroy, texto_intro, delay=1.1)
-    
-    # PASO 2: Zoom cinematográfico hacia los ojos de Mario
-    fpc_height = jugador.camera_pivot.y
-    ojo_pos = Vec3(jugador.x, jugador.y + fpc_height, jugador.z)
-    dur_zoom = 1.2
-    camera.animate_position(ojo_pos, duration=dur_zoom, curve=curve.in_out_sine)
-    camera.animate_rotation(Vec3(0, 90, 0), duration=dur_zoom, curve=curve.in_out_sine)
-    
-    # PASO 3: Al terminar el zoom, snap a primera persona
-    def activar_primera_persona():
+    def mostrar_go_final():
+        texto_intro.text = '¡GO!'
+        texto_intro.color = color.green
+        texto_intro.scale = 5
+        # Animación más explosiva y fluida
+        texto_intro.animate_scale(10, duration=0.8, curve=curve.out_elastic)
+        texto_intro.fade_out(value=0, duration=0.8, delay=0.4)
         
-        # FIJACIÓN ESTRICTA: Aseguramos la posición milimétrica antes de que el motor de físicas reaccione
+        def iniciar_soundtrack():
+            if 'soundtrack' in globals() and soundtrack:
+                soundtrack.play()
+                soundtrack.volume = 0.5
+        invoke(iniciar_soundtrack, delay=0.5)
+        
+        # PASO 1: Posicionar al jugador (gravedad aún apagada)
+        jugador.gravity = 0
+        jugador.velocity_y = 0
+        jugador.speed = 0
+        jugador.jump_height = 0
         jugador.position = POSICION_INICIAL_JUGADOR
-        jugador.rotation = Vec3(0, 90, 0) # Mirar hacia la derecha (hacia la plataforma)
-        jugador.camera_pivot.rotation_x = 0 # Vista totalmente de frente, sin mirar al piso
+        jugador.rotation = Vec3(0, 0, 0)
+        jugador.camera_pivot.rotation = Vec3(0, 0, 0)
         
-        camera.parent = jugador.camera_pivot
-        camera.position = (0, 0, 0)
-        camera.rotation = (0, 0, 0)
+        invoke(destroy, texto_intro, delay=1.1)
         
-        jugador.speed = 5
-        jugador.jump_height = 1.5
-        jugador.cursor.visible = False # Punto rojo marcador oculto
-        jugador.mouse_sensitivity = Vec2(40, 40)
-        mouse.locked = True
+        # PASO 2: Zoom cinematográfico hacia los ojos de Mario
+        fpc_height = jugador.camera_pivot.y
+        ojo_pos = Vec3(jugador.x, jugador.y + fpc_height, jugador.z)
+        dur_zoom = 1.2
+        camera.animate_position(ojo_pos, duration=dur_zoom, curve=curve.in_out_sine)
+        camera.animate_rotation(Vec3(0, 90, 0), duration=dur_zoom, curve=curve.in_out_sine)
         
-        def reactivar_fisica():
-            jugador.gravity = 1
-            jugador.velocity_y = 0
-        invoke(reactivar_fisica, delay=0.1)
+        # Efecto FOV (Field of View) dinámico para dar una sensación de velocidad épica al acercarse
+        fov_original = camera.fov
+        camera.animate('fov', fov_original + 20, duration=dur_zoom/2, curve=curve.out_sine)
+        invoke(lambda: camera.animate('fov', fov_original, duration=dur_zoom/2, curve=curve.in_sine), delay=dur_zoom/2)
         
-        def reactivar_update():
-            global en_intro
-            en_intro = False
-        invoke(reactivar_update, delay=0.2)
-    
-    invoke(activar_primera_persona, delay=dur_zoom + 0.05)
+        # PASO 3: Al terminar el zoom, snap a primera persona
+        def activar_primera_persona():
+            
+            # FIJACIÓN ESTRICTA: Aseguramos la posición milimétrica antes de que el motor de físicas reaccione
+            jugador.position = POSICION_INICIAL_JUGADOR
+            jugador.rotation = Vec3(0, 90, 0) # Mirar hacia la derecha (hacia la plataforma)
+            jugador.camera_pivot.rotation_x = 0 # Vista totalmente de frente, sin mirar al piso
+            
+            camera.parent = jugador.camera_pivot
+            camera.position = (0, 0, 0)
+            camera.rotation = (0, 0, 0)
+            
+            jugador.speed = 5
+            jugador.jump_height = 1.5
+            jugador.cursor.visible = False # Punto rojo marcador oculto
+            jugador.mouse_sensitivity = Vec2(40, 40)
+            mouse.locked = True
+            
+            def reactivar_fisica():
+                jugador.gravity = 1
+                jugador.velocity_y = 0
+            invoke(reactivar_fisica, delay=0.1)
+            
+            def reactivar_update():
+                global en_intro
+                en_intro = False
+            invoke(reactivar_update, delay=0.2)
+        
+        invoke(activar_primera_persona, delay=dur_zoom + 0.05)
+
+    # 1.0 segundo es un tiempo estándar entre Ready y Go, ajusta si el audio lo requiere
+    invoke(mostrar_go_final, delay=1.0)
 
 def reiniciar_juego():
     global secuaz_nivel, texto_victoria
@@ -957,7 +1204,7 @@ def reiniciar_juego():
             secuaz_nivel.color = color.white
             secuaz_nivel.rotation = (0, 0, 0)
             secuaz_nivel.position = (0, 84.3, 0)
-            secuaz_nivel.scale = 0.08
+            secuaz_nivel.scale = 1.0
         else:
             secuaz_nivel = Secuaz(position=(0, 84.3, 0))
     except NameError:
@@ -990,6 +1237,10 @@ def reiniciar_juego():
     mouse.locked = True
     mouse.visible = False
     
+    if 'soundtrack' in globals() and soundtrack:
+        soundtrack.resume()
+        soundtrack.volume = 0.5
+        
     camera.parent = jugador.camera_pivot
     camera.position = (0, 0, 0)
     camera.rotation = (0, 0, 0)
@@ -1010,6 +1261,7 @@ def input(key):
             hit_info = raycast(camera.world_position, camera.forward, distance=4)
             if hit_info.hit and hit_info.entity == secuaz_nivel:
                 secuaz_nivel.recibir_dano()
+                camera.shake(duration=0.25, magnitude=0.06) # Temblor fuerte al golpear al jefe
 
 def update():
     if not application.paused and not en_intro:
@@ -1272,8 +1524,15 @@ if __name__ == '__main__':
     menu_pausa = MenuPausa()
     game_manager = GameManager()
     jugador = Jugador()
-    secuaz_nivel = Secuaz(position=(0, 84.3, 0))
+    secuaz_nivel = Secuaz(position=(0, 85.5, 0))
     spawn_martillo()
     
+    # Iniciar la música de fondo
+    try:
+        soundtrack = Audio('assets/sountrack.wav', autoplay=False, loop=True, volume=0.5)
+    except Exception as e:
+        print("No se pudo cargar el soundtrack:", e)
+        soundtrack = None
+        
     iniciar_intro()
     app.run()
