@@ -12,7 +12,7 @@ import sys
 import json
 import time
 import threading
-from src.core import estadisticas_db
+
 
 # ==========================================================
 # RUTAS
@@ -20,7 +20,7 @@ from src.core import estadisticas_db
 
 CARPETA_PROYECTO = Path(__file__).resolve().parent
 
-RUTA_FONDO_MENU = CARPETA_PROYECTO / "Imagenes" / "fondo_juego_sin_sello.png"
+RUTA_FONDO_MENU = CARPETA_PROYECTO / "assets" / "fondo_juego_sin_sello.png"
 RUTA_PROGRESS = CARPETA_PROYECTO / "progress.json"
 RUTA_STATS = CARPETA_PROYECTO / "estadisticas.json"
 RUTA_RUN_RESULT = CARPETA_PROYECTO / "run_result.json"
