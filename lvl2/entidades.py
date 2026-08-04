@@ -79,7 +79,8 @@ class Jugador(Entity):
                                  background=True)
 
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
-        self.pivot_martillo = Entity(parent=camera, position=(0.40, -0.05, 0.70), enabled=False)
+        self.pivot_martillo = Entity(parent=camera, position=(0.5, 0.01, 1.0), enabled=False)
+        self.martillo_rotador = Entity(parent=self.pivot_martillo, rotation=(-189, 103, 188))
         self.martillo_actual = None
 
         mouse.locked = True
@@ -213,13 +214,13 @@ class Jugador(Entity):
             self.pivot_martillo.enabled = True
             e.recogido = True
             e.collider = None
-            e.parent = self.pivot_martillo
-            e.position = (0, 0, 0)
-            e.rotation = (0, -90, 0)  # Cabeza roja apuntando arriba
-            e.origin = (0, -0.3, 0)  # Pivota desde el punto de agarre (mitad del mango)
+            e.parent = self.martillo_rotador
+            e.position = (0, 1.34, 0)
+            e.rotation = (0, 0, 0)
+            e.origin = (0, 0, 0)
             self.pivot_martillo.rotation_x = 0
             self.pivot_martillo.rotation_z = 0  # Posición inicial
-            e.scale = 0.0005
+            e.scale = 0.0015
             self.martillo_actual = e
             
             invoke(self._perder_martillo, delay=10)
@@ -243,12 +244,12 @@ class Jugador(Entity):
         def paso_1_caida():
             # Baja el brazo (posición) y rota hacia adelante sin exagerar el ángulo
             self.pivot_martillo.animate_rotation_x(-75, duration=0.45, curve=curve.in_sine)
-            self.pivot_martillo.animate_position((0.40, -0.65, 0.90), duration=0.45, curve=curve.in_sine)
+            self.pivot_martillo.animate_position((0.5, -0.65, 1.2), duration=0.45, curve=curve.in_sine)
             
         def paso_2_recuperacion():
             # Regresa a la posición y rotación original
             self.pivot_martillo.animate_rotation_x(0, duration=0.55, curve=curve.out_elastic)
-            self.pivot_martillo.animate_position((0.40, -0.05, 0.70), duration=0.55, curve=curve.out_elastic)
+            self.pivot_martillo.animate_position((0.5, 0.01, 1.0), duration=0.55, curve=curve.out_elastic)
             
         def liberar_ataque():
             self._atacando_martillo = False
