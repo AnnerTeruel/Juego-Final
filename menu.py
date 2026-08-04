@@ -26,7 +26,7 @@ RUTA_STATS = CARPETA_PROYECTO / "estadisticas.json"
 RUTA_RUN_RESULT = CARPETA_PROYECTO / "run_result.json"
 
 try:
-    estadisticas_db.crear_tablas()
+    pass # estadisticas_db.crear_tablas()
 except Exception as error:
     print(f"Error creando base de datos de estadisticas: {error}")
 
@@ -260,8 +260,9 @@ def formatear_posicion(posicion):
 
 def cargar_estadisticas():
     try:
-        estadisticas_db.migrar_desde_json(RUTA_STATS)
-        return estadisticas_db.cargar_partidas()
+        # estadisticas_db.migrar_desde_json(RUTA_STATS)
+        # return estadisticas_db.cargar_partidas()
+        return []
     except Exception as error:
         print(f"Error cargando estadisticas: {error}")
         return []
@@ -269,13 +270,7 @@ def cargar_estadisticas():
 
 def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
     try:
-        estadisticas_db.guardar_partida(
-            nombre,
-            puntos,
-            tiempo,
-            nivel,
-            posicion
-        )
+        pass # estadisticas_db.guardar_partida(nombre, puntos, tiempo, nivel, posicion)
     except Exception as error:
         print(f"Error guardando estadisticas: {error}")
     return
@@ -672,7 +667,8 @@ def eliminar_estadistica():
     if respuesta:
         for elemento in seleccion:
             try:
-                estadisticas_db.eliminar_partida(elemento)
+                # estadisticas_db.eliminar_partida(elemento)
+                pass
             except Exception as error:
                 print(f"Error eliminando estadistica: {error}")
 
@@ -703,7 +699,8 @@ def limpiar_estadisticas():
 
     if respuesta:
         try:
-            estadisticas_db.limpiar_partidas()
+            # estadisticas_db.limpiar_partidas()
+            pass
         except Exception as error:
             print(f"Error limpiando estadisticas: {error}")
 
