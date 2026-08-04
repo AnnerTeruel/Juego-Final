@@ -942,7 +942,7 @@ def iniciar_nivel(numero):
         # Ejecutar el nivel en un hilo para no bloquear la UI
         def run_level():
             try:
-                subprocess.run(args, cwd=str(directorio_trabajo))
+                subprocess.run(args, cwd=str(directorio_trabajo), creationflags=0x08000000)
             except Exception as e:
                 print(f"Error ejecutando nivel: {e}")
 

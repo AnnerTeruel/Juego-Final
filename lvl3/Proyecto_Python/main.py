@@ -1,7 +1,15 @@
 from ursina import *
 from src.core.level_manager import LevelManager
 
-app = Ursina()
+app = Ursina(title='Donkey Kong 3D - Nivel 3', development_mode=False, borderless=False, fullscreen=False)
+
+def maximizar_ventana():
+    import ctypes
+    hwnd = ctypes.windll.user32.FindWindowW(None, "Donkey Kong 3D - Nivel 3")
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 3)
+
+invoke(maximizar_ventana, delay=1.5)
 
 window.exit_button.visible = False
 window.exit_button.enabled = False
