@@ -12,7 +12,7 @@ import sys
 import json
 import time
 import threading
-from src.core import estadisticas_db
+
 
 # ==========================================================
 # RUTAS
@@ -925,7 +925,16 @@ Label(
 
 def iniciar_nivel(numero):
     # Preparar ruta y argumentos
-    ruta_script = CARPETA_PROYECTO / f"level{numero}.py"
+    if numero == 1:
+        ruta_script = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada" / "nivel1.py"
+        directorio_trabajo = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada"
+    elif numero == 3:
+        ruta_script = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python" / "main.py"
+        directorio_trabajo = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python"
+    else:
+        ruta_script = CARPETA_PROYECTO / f"level{numero}.py"
+        directorio_trabajo = CARPETA_PROYECTO
+
     args = [sys.executable, str(ruta_script)]
     if nombre_jugador_actual:
         args.append(nombre_jugador_actual)
@@ -936,7 +945,7 @@ def iniciar_nivel(numero):
         # Ejecutar el nivel en un hilo para no bloquear la UI
         def run_level():
             try:
-                subprocess.run(args)
+                subprocess.run(args, cwd=str(directorio_trabajo))
             except Exception as e:
                 print(f"Error ejecutando nivel: {e}")
 
