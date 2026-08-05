@@ -1,6 +1,5 @@
 from ursina import (
-    Ursina, camera, window, color, DirectionalLight, AmbientLight, Text, Vec3, scene, destroy
-)
+    Ursina, camera, window, color, DirectionalLight,invoke, AmbientLight, Text, Vec3, scene, destroy)
 from mapa import construir_nivel, MiniMapaNivel2
 from entidades import Jugador, Meta, generar_martillos
 from enemigos import DiddyKong, BarrilAceite
