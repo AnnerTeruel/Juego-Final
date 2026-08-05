@@ -94,11 +94,11 @@ class Jugador(Entity):
 
         # Configuración de Primera Persona
         self.rotation_y = 90
-        camera.parent = self
-        camera.position = (0, 0.8, 0)
-        camera.rotation = (0, 0, 0)
         # Ocultamos el cubo del jugador con transparencia en lugar de visible=False para no ocultar la mano
         self.color = color.rgba(0, 0, 0, 0)
+        
+        self._en_cinematica = True
+        self._cinematica_inicio()
 
         self.texto_vidas = Text(text='VIDA: 3', position=(-0.83, 0.46), scale=2.2, color=color.red, background=True)
         self.texto_puntos = Text(text='PUNTOS: 0', position=(-0.02, 0.46), origin=(0, 0), scale=2.0, color=color.yellow,
@@ -125,7 +125,37 @@ class Jugador(Entity):
         except:
             self.audio_salto = None
 
+    def _cinematica_inicio(self):
+        # Desactivamos el ratón para que el jugador no pueda mover la cámara todavía
+        mouse.locked = False
+        
+        # Posición inicial de la cámara para ver todo el mapa (similar a la de victoria pero de frente)
+        camera.parent = scene
+        camera.position = (0, 11, -85)
+        camera.rotation = (0, 0, 0)
+        
+        # Animamos la cámara hacia la posición del jugador
+        delay_inicio = 1.0
+        duracion_vuelo = 2.5
+        
+        pos_objetivo = self.position + Vec3(0, 0.8, 0)
+        
+        invoke(camera.animate_position, pos_objetivo, duration=duracion_vuelo, curve=curve.in_out_sine, delay=delay_inicio)
+        invoke(camera.animate_rotation, (0, 90, 0), duration=duracion_vuelo, curve=curve.in_out_sine, delay=delay_inicio)
+        
+        # Al terminar, devolvemos el control
+        invoke(self._fin_cinematica_inicio, delay=delay_inicio + duracion_vuelo + 0.1)
+
+    def _fin_cinematica_inicio(self):
+        self._en_cinematica = False
+        mouse.locked = True
+        camera.parent = self
+        camera.position = (0, 0.8, 0)
+        camera.rotation = (0, 0, 0)
+
     def input(self, key):
+        if getattr(self, '_en_cinematica', False): return
+        
         if key == 'left mouse down' and self.tiene_martillo and not getattr(self, '_atacando_martillo', False):
             self._atacar_con_martillo()
 
@@ -142,19 +172,14 @@ class Jugador(Entity):
             elif key == 'space up' and self.vel_y > 0:
                 self.vel_y *= 0.5
 
-        if key == 'c':
-            if camera.parent == self:
-                camera.parent = scene
-                camera.position = (0, 14, -140)
-                camera.rotation = (8, 0, 0)
-            else:
-                camera.parent = self
-                camera.position = (0, 0.8, 0)
-                camera.rotation = (0, 0, 0)
-                camera.rotation_x = 0
+
+
+        # Activar victoria (cheat/debug)
+        if key == 'v':
+            self._ganar()
 
     def update(self):
-        if self._ganando or pausa.esta_pausado(): return
+        if self._ganando or pausa.esta_pausado() or getattr(self, '_en_cinematica', False): return
         dt = time.dt
 
         # Vista de ratón
@@ -420,9 +445,23 @@ class Jugador(Entity):
         self._invulnerable = True
         self.texto_vidas.text = f'VIDA: {self.vidas}'
 
-        # Los barriles ya no se destruyen al recibir daño
-        # (Solo se destruyen cuando salen de la plataforma y caen al vacío)
+        # Animación de muerte en primera persona
+        self._en_cinematica = True
+        
+        # La cámara "cae" hacia atrás y mira un poco hacia arriba
+        camera.animate_position((0, -0.6, -1.0), duration=0.6, curve=curve.out_expo)
+        camera.animate_rotation((-60, 0, 25), duration=0.6, curve=curve.out_expo)
+        
+        # Destello rojo
+        pantalla_roja = Entity(parent=camera.ui, model='quad', color=color.rgba(1, 0, 0, 0.6), scale=(20, 20), z=-1)
+        pantalla_roja.animate_color(color.clear, duration=1.0)
+        destroy(pantalla_roja, delay=1.1)
 
+        # Esperar 1 segundo en el suelo antes de reaparecer
+        invoke(self._respawn, delay=1.0)
+        invoke(self._fin_invulnerabilidad, delay=3.0)
+
+    def _respawn(self):
         self.x, self.y, self.z = self._spawn.x, self._spawn.y, self._spawn.z
         self.vel_y = 0
         self.escalando = False
@@ -431,8 +470,15 @@ class Jugador(Entity):
             destroy(self.martillo_actual)
             self.martillo_actual = None
 
-        invoke(self._fin_invulnerabilidad, delay=2)
-        if self.vidas <= 0: self._game_over()
+        # Restaurar cámara FPS
+        camera.position = (0, 0.8, 0)
+        camera.rotation = (0, 0, 0)
+        self.rotation = (0, 90, 0)
+        
+        if self.vidas <= 0:
+            self._game_over()
+        else:
+            self._en_cinematica = False
 
     def _fin_invulnerabilidad(self):
         self._invulnerable = False
