@@ -26,7 +26,7 @@ RUTA_STATS = CARPETA_PROYECTO / "estadisticas.json"
 RUTA_RUN_RESULT = CARPETA_PROYECTO / "run_result.json"
 
 try:
-    estadisticas_db.crear_tablas()
+    pass # estadisticas_db.crear_tablas()
 except Exception as error:
     print(f"Error creando base de datos de estadisticas: {error}")
 
@@ -260,8 +260,9 @@ def formatear_posicion(posicion):
 
 def cargar_estadisticas():
     try:
-        estadisticas_db.migrar_desde_json(RUTA_STATS)
-        return estadisticas_db.cargar_partidas()
+        # estadisticas_db.migrar_desde_json(RUTA_STATS)
+        # return estadisticas_db.cargar_partidas()
+        return []
     except Exception as error:
         print(f"Error cargando estadisticas: {error}")
         return []
@@ -269,13 +270,7 @@ def cargar_estadisticas():
 
 def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
     try:
-        estadisticas_db.guardar_partida(
-            nombre,
-            puntos,
-            tiempo,
-            nivel,
-            posicion
-        )
+        pass # estadisticas_db.guardar_partida(nombre, puntos, tiempo, nivel, posicion)
     except Exception as error:
         print(f"Error guardando estadisticas: {error}")
     return
@@ -672,7 +667,8 @@ def eliminar_estadistica():
     if respuesta:
         for elemento in seleccion:
             try:
-                estadisticas_db.eliminar_partida(elemento)
+                # estadisticas_db.eliminar_partida(elemento)
+                pass
             except Exception as error:
                 print(f"Error eliminando estadistica: {error}")
 
@@ -703,7 +699,8 @@ def limpiar_estadisticas():
 
     if respuesta:
         try:
-            estadisticas_db.limpiar_partidas()
+            # estadisticas_db.limpiar_partidas()
+            pass
         except Exception as error:
             print(f"Error limpiando estadisticas: {error}")
 
@@ -925,7 +922,16 @@ Label(
 
 def iniciar_nivel(numero):
     # Preparar ruta y argumentos
-    ruta_script = CARPETA_PROYECTO / f"level{numero}.py"
+    if numero == 1:
+        ruta_script = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada" / "nivel1.py"
+        directorio_trabajo = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada"
+    elif numero == 3:
+        ruta_script = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python" / "main.py"
+        directorio_trabajo = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python"
+    else:
+        ruta_script = CARPETA_PROYECTO / f"level{numero}.py"
+        directorio_trabajo = CARPETA_PROYECTO
+
     args = [sys.executable, str(ruta_script)]
     if nombre_jugador_actual:
         args.append(nombre_jugador_actual)
@@ -936,7 +942,7 @@ def iniciar_nivel(numero):
         # Ejecutar el nivel en un hilo para no bloquear la UI
         def run_level():
             try:
-                subprocess.run(args)
+                subprocess.run(args, cwd=str(directorio_trabajo), creationflags=0x08000000)
             except Exception as e:
                 print(f"Error ejecutando nivel: {e}")
 

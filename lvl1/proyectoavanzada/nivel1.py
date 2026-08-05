@@ -1493,7 +1493,15 @@ class GeneradorNivel:
 # INICIALIZACIÓN PRINCIPAL
 # ==========================================
 if __name__ == '__main__':
-    app = Ursina(title='Donkey Kong 3D - Nivel 1', development_mode=False)
+    app = Ursina(title='Donkey Kong 3D - Nivel 1', development_mode=False, borderless=False, fullscreen=False)
+    
+    def maximizar_ventana():
+        import ctypes
+        hwnd = ctypes.windll.user32.FindWindowW(None, "Donkey Kong 3D - Nivel 1")
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 3)
+            
+    invoke(maximizar_ventana, delay=1.5)
     
     # IMPORTANTE: Fondo negro absoluto y limpieza de atmósfera para evitar lavado de colores
     window.color = color.black
