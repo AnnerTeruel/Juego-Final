@@ -4,7 +4,7 @@ import random
 import pausa
 
 GRAVEDAD_BARRIL = 18.0
-VEL_BARRIL = 4.5
+VEL_BARRIL = 7.0
 
 
 class BarrilAceite(Entity):
@@ -223,10 +223,10 @@ class DiddyKong(Entity):
             if not self.enabled: return
             self.barriles_por_lanzar -= 1
             if self.barriles_por_lanzar > 0:
-                # Hay más barriles en la ráfaga: reproducir animación de nuevo inmediatamente
+                # Hay más barriles en la ráfaga: esperar un poco antes de lanzar el siguiente
                 self.animando = False
-                self._intervalo = 0.0   # disparar en el próximo frame
-                self._timer = 999.0     # forzar que el update lo detecte de inmediato
+                self._intervalo = 0.6   # 0.6 segundos de separación entre barriles
+                self._timer = 0.0
             else:
                 # Ráfaga terminada: esperar 2 segundos
                 self._intervalo = 2.0
