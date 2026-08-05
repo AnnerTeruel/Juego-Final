@@ -22,22 +22,29 @@ class Jugador:
         self.puntuacion = 0
         self.multiplicador = 1
         
-        self.texto_puntuacion = Text(
-            text=f'Puntuacion: 0\nMultiplicador: x1', 
-            position=(-0.85, 0.45), 
-            scale=2, 
-            color=color.yellow
-        )
-        
+        # --- HUD BARRA SUPERIOR PROFESIONAL ---
+        self.hud_fondo = Entity(parent=camera.ui, model='quad', color=Color(0.05, 0.05, 0.12, 0.9), scale=(1.8, 0.07), position=(0, 0.465), z=10)
+        self.hud_linea = Entity(parent=camera.ui, model='quad', color=Color(1.0, 0.84, 0.0, 0.9), scale=(1.8, 0.003), position=(0, 0.43), z=9.9)
+
+        self.texto_puntuacion = Text(parent=camera.ui, text='PUNTOS: 0', position=(-0.82, 0.478), scale=0.9, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FFD700'), z=9)
+        self.lbl_vidas = Text(parent=camera.ui, text='VIDAS:', position=(-0.24, 0.478), scale=0.9, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FF2E63'), z=9)
+        self.corazones_icons = []
+        for i in range(3):
+            c = Entity(parent=camera.ui, model='circle', color=color.hex('#FF2E63'), scale=(0.020, 0.020), position=(-0.08 + i * 0.032, 0.465), z=8)
+            self.corazones_icons.append(c)
+
         # MARTILLO (Arma en primera persona)
         self.tiene_martillo = False
         self.tiempo_martillo = 0
         self.texto_martillo = Text(
+            parent=camera.ui,
             text='MARTILLO: INACTIVO', 
-            position=(0.85, 0.45), 
-            origin=(0.5, 0.5), 
-            scale=2,
-            color=color.orange
+            position=(0.14, 0.478), 
+            origin=(0, 0), 
+            scale=0.9,
+            font='assets/PressStart2P-Regular.ttf',
+            color=color.hex('#777799'),
+            z=9
         )
         self.martillo_pivot = Entity(parent=camera, position=(0.83, -1.02, 0.81), visible=False)
         self.martillo_rotador = Entity(
@@ -185,13 +192,17 @@ class Jugador:
         self.actualizar_ui()
 
     def actualizar_ui(self):
-        self.texto_puntuacion.text = f'Puntuacion: {self.puntuacion}\nMultiplicador: x{self.multiplicador}'
-        if self.tiene_martillo:
-            self.texto_martillo.text = f'MARTILLO: {int(self.tiempo_martillo)}s'
-            self.texto_martillo.color = color.red
+        if self.multiplicador > 1:
+            self.texto_puntuacion.text = f'PUNTOS: {self.puntuacion} (x{self.multiplicador})'
         else:
-            self.texto_martillo.text = 'MARTILLO: INACTIVO'
-            self.texto_martillo.color = color.orange
+            self.texto_puntuacion.text = f'PUNTOS: {self.puntuacion}'
+
+        if self.tiene_martillo:
+            self.texto_martillo.text = f'🔨 MARTILLO: {int(self.tiempo_martillo)}s'
+            self.texto_martillo.color = color.hex('#FFD700')
+        else:
+            self.texto_martillo.text = '🔨 INACTIVO'
+            self.texto_martillo.color = color.hex('#777799')
 
     def reaparecer(self):
         self.controller.position = self.start_position
@@ -216,6 +227,9 @@ class Jugador:
         destroy(self.controller)
         destroy(self.texto_puntuacion)
         destroy(self.texto_martillo)
+        if hasattr(self, 'hud_fondo'): destroy(self.hud_fondo)
+        if hasattr(self, 'hud_linea'): destroy(self.hud_linea)
+        if hasattr(self, 'texto_salud'): destroy(self.texto_salud)
         destroy(self.barra_fondo)
         destroy(self.barra_estamina)
         destroy(self.lbl_estamina)

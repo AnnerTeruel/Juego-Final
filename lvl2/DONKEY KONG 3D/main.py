@@ -35,16 +35,16 @@ camera.fov = 90
 puntos_actuales = 0
 high_score = 0
 
-# HUD Arcade
-ui_high = Text(text=f'TOP: {high_score}', position=(0.60, 0.46), scale=2.2, color=color.cyan, background=True)
+# HUD Arcade (TOP score eliminado)
 
 
 def _limpiar_nivel():
     tipos = {'viga', 'escalera', 'muerte', 'barril', 'enemigo', 'meta', 'martillo', 'aceite', 'llama', 'minimapa'}
-    for e in scene.entities[:]:
-        if getattr(e, 'type', None) in tipos:
-            destroy(e)
-        elif hasattr(e, 'vidas'):
+    for e in list(scene.entities):
+        if hasattr(e, 'destroy_ui'):
+            try: e.destroy_ui()
+            except Exception: pass
+        if getattr(e, 'type', None) in tipos or hasattr(e, 'vidas'):
             destroy(e)
 
 
@@ -60,7 +60,7 @@ def iniciar_nivel(puntos=0, nivel=2):
     jugador.puntos = puntos_actuales
     jugador.high_score = high_score
     jugador.texto_puntos.text = f'PUNTOS: {puntos_actuales}'
-    jugador.ui_high_ref = ui_high
+    jugador.ui_high_ref = None
 
     MiniMapaNivel2(jugador)
 

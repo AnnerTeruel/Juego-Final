@@ -62,7 +62,9 @@ def maximizar_ventana():
 
 def mostrar_controles():
     """Muestra una guia de controles sin fondo negro, mas ancha y que desaparece a los 5 segundos."""
+    global _panel_controles_ref
     panel = Entity(parent=camera.ui)
+    _panel_controles_ref = panel
     
     titulo = Text(
         parent=panel,
@@ -182,22 +184,43 @@ class GameManager(Entity):
         self.muerto = False
         self.juego_terminado = False
         
-        self.texto_ui = Text(text='', position=(-0.85, 0.45), scale=1.2, color=color.white)
-        self.texto_salud = Text(text='', position=(-0.85, 0.41), scale=1.2, color=color.red)
-        self.texto_coords = Text(text='', position=(-0.85, 0.37), scale=1.0, color=color.rgba(100, 220, 255, 200))
+        # --- HUD BARRA SUPERIOR PROFESIONAL ---
+        self.hud_fondo = Entity(parent=camera.ui, model='quad', color=Color(0.05, 0.05, 0.12, 0.9), scale=(1.8, 0.07), position=(0, 0.465), z=10)
+        self.hud_linea = Entity(parent=camera.ui, model='quad', color=Color(1.0, 0.84, 0.0, 0.9), scale=(1.8, 0.003), position=(0, 0.43), z=9.9)
+
+        self.texto_puntos = Text(parent=camera.ui, text='', position=(-0.82, 0.478), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FFD700'), z=9)
+        self.lbl_vidas = Text(parent=camera.ui, text='VIDAS:', position=(-0.30, 0.478), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FF2E63'), z=9)
+        self.corazones_icons = []
+        for i in range(3):
+            c = Entity(parent=camera.ui, model='circle', color=color.hex('#FF2E63'), scale=(0.020, 0.020), position=(-0.16 + i * 0.035, 0.465), z=8)
+            self.corazones_icons.append(c)
+
+        self.texto_martillo = Text(parent=camera.ui, text='', position=(0.28, 0.478), origin=(0, 0), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#00F0FF'), z=9)
         
         self.actualizar_ui()
 
     def actualizar_ui(self):
+        self.texto_puntos.text = f'BONUS: {self.puntuacion}'
+        
+        vidas_num = int(math.ceil(self.salud_jugador))
+        for i, icon in enumerate(self.corazones_icons):
+            if i < vidas_num:
+                icon.color = color.hex('#FF2E63')
+                icon.scale = (0.022, 0.022)
+            else:
+                icon.color = color.hex('#2A2A38')
+                icon.scale = (0.016, 0.016)
+        
         if self.martillo_activo:
             if getattr(self, 'martillo_infinito', False):
-                self.texto_ui.text = f'BONUS: {self.puntuacion} | MARTILLO: ∞ INFINITO'
+                self.texto_martillo.text = 'MARTILLO: INFINITO'
+                self.texto_martillo.color = color.hex('#00F0FF')
             else:
-                self.texto_ui.text = f'BONUS: {self.puntuacion} | MARTILLO: {int(self.tiempo_martillo)}s'
+                self.texto_martillo.text = f'MARTILLO: {int(self.tiempo_martillo)}s'
+                self.texto_martillo.color = color.hex('#FFD700')
         else:
-            self.texto_ui.text = f'BONUS: {self.puntuacion}'
-            
-        self.texto_salud.text = f'SALUD: {self.salud_jugador/2} Corazones'
+            self.texto_martillo.text = 'MARTILLO: INACTIVO'
+            self.texto_martillo.color = color.hex('#777799')
 
     def agregar_puntos(self, puntos):
         self.puntuacion += puntos
@@ -247,7 +270,7 @@ class GameManager(Entity):
         if application.paused or getattr(self, 'muerto', False): return
 
         # Coordenadas en tiempo real
-        if 'jugador' in globals():
+        if 'jugador' in globals() and hasattr(self, 'texto_coords'):
             p = jugador.position
             self.texto_coords.text = f'X:{p.x:.1f}  Y:{p.y:.1f}  Z:{p.z:.1f}'
 
@@ -1132,16 +1155,35 @@ class MenuGameOver(Entity):
 class MenuPausa(Entity):
     def __init__(self):
         super().__init__(parent=camera.ui, enabled=False, ignore_paused=True)
-        self.fondo = Entity(parent=self, model='quad', color=color.rgba(0, 0, 0, 200), scale=(2,2))
-        Text(parent=self, text='JUEGO PAUSADO', origin=(0,0), y=0.3, scale=2)
-        Button(parent=self, text='Continuar', y=0.1, scale=(0.3, 0.08), on_click=self.reanudar)
-        Button(parent=self, text='Reiniciar Nivel', y=0, scale=(0.3, 0.08), on_click=self.accion_reiniciar)
-        Button(parent=self, text='Salir', y=-0.1, scale=(0.3, 0.08), on_click=accion_salir)
+        self.menu_card = Entity(parent=self, model='quad', color=color.Color(0.06, 0.06, 0.14, 0.94), scale=(0.65, 0.76), z=-1)
+        borde = Entity(parent=self.menu_card, model='quad', color=color.hex('#00F0FF'), scale=(1.02, 1.02), z=0.01)
+        
+        Text(parent=self.menu_card, text='PAUSA', font='assets/PressStart2P-Regular.ttf', origin=(0, 0), position=(0, 0.35), scale=1.6, color=color.hex('#FFD700'), z=-0.01)
+        Entity(parent=self.menu_card, model='quad', color=color.hex('#00F0FF'), scale=(0.90, 0.005), position=(0, 0.23), z=-0.01)
+
+        def _crear_btn(txt, y_pos, fn):
+            b = Button(
+                parent=self.menu_card, text=txt, position=(0, y_pos), scale=(0.55, 0.10),
+                color=color.Color(0.10, 0.10, 0.25, 1), highlight_color=color.hex('#00F0FF'),
+                pressed_color=color.hex('#FFD700'), text_color=color.white, on_click=fn, z=-0.02
+            )
+            if hasattr(b, 'text_entity') and b.text_entity:
+                b.text_entity.font = 'assets/PressStart2P-Regular.ttf'
+                b.text_entity.scale = 0.65
+            return b
+
+        _crear_btn('CONTINUAR', 0.10, self.reanudar)
+        _crear_btn('REINICIAR', -0.05, self.accion_reiniciar)
+        _crear_btn('SALIR', -0.20, accion_salir)
 
     def alternar(self):
         if menu_game_over.enabled: return 
         self.enabled = not self.enabled
         application.paused = self.enabled
+        
+        if '_panel_controles_ref' in globals() and _panel_controles_ref:
+            try: _panel_controles_ref.enabled = not self.enabled
+            except: pass
         
         # Pausar/Reanudar música de fondo (Usamos Volumen para evitar el bug de estática de archivos WAV grandes)
         if 'soundtrack' in globals() and soundtrack:

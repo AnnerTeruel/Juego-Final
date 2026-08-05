@@ -100,9 +100,32 @@ class Jugador(Entity):
         self._en_cinematica = True
         self._cinematica_inicio()
 
-        self.texto_vidas = Text(text='VIDA: 3', position=(-0.83, 0.46), scale=2.2, color=color.red, background=True)
-        self.texto_puntos = Text(text='PUNTOS: 0', position=(-0.02, 0.46), origin=(0, 0), scale=2.0, color=color.yellow,
-                                 background=True)
+        # --- HUD BARRA SUPERIOR PROFESIONAL ---
+        self.hud_fondo = Entity(parent=camera.ui, model='quad', color=color.Color(0.05, 0.05, 0.12, 0.9), scale=(1.8, 0.07), position=(0, 0.465), z=10)
+        self.hud_linea = Entity(parent=camera.ui, model='quad', color=color.Color(1.0, 0.84, 0.0, 0.9), scale=(1.8, 0.003), position=(0, 0.43), z=9.9)
+
+        self.texto_puntos = Text(parent=camera.ui, text=f'PUNTOS: {self.puntos}', position=(-0.82, 0.478), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FFD700'), z=9)
+        self.lbl_vidas = Text(parent=camera.ui, text='VIDAS:', position=(-0.30, 0.478), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#FF2E63'), z=9)
+        self.corazones_icons = []
+        for i in range(3):
+            c = Entity(parent=camera.ui, model='circle', color=color.hex('#FF2E63'), scale=(0.020, 0.020), position=(-0.16 + i * 0.035, 0.465), z=8)
+            self.corazones_icons.append(c)
+
+        self.texto_martillo = Text(parent=camera.ui, text='MARTILLO: INACTIVO', position=(0.28, 0.478), origin=(0, 0), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#777799'), z=9)
+
+    def destroy_ui(self):
+        try:
+            if hasattr(self, 'hud_fondo') and self.hud_fondo: destroy(self.hud_fondo)
+            if hasattr(self, 'hud_linea') and self.hud_linea: destroy(self.hud_linea)
+            if hasattr(self, 'texto_puntos') and self.texto_puntos: destroy(self.texto_puntos)
+            if hasattr(self, 'lbl_vidas') and self.lbl_vidas: destroy(self.lbl_vidas)
+            if hasattr(self, 'corazones_icons') and self.corazones_icons:
+                for c in self.corazones_icons:
+                    destroy(c)
+                self.corazones_icons = []
+            if hasattr(self, 'texto_martillo') and self.texto_martillo: destroy(self.texto_martillo)
+        except Exception:
+            pass
 
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
         # Empieza oculto; solo se activa cuando el jugador recoge un martillo
@@ -156,7 +179,7 @@ class Jugador(Entity):
     def input(self, key):
         if getattr(self, '_en_cinematica', False): return
         
-        if key == 'left mouse down' and self.tiene_martillo and not getattr(self, '_atacando_martillo', False):
+        if (key == 'left mouse down' or key == 'right mouse down') and self.tiene_martillo and not getattr(self, '_atacando_martillo', False):
             self._atacar_con_martillo()
 
         if camera.parent == self:
@@ -200,20 +223,24 @@ class Jugador(Entity):
             if held_keys['e'] or held_keys['space']: camera.y += vel_cam
             if held_keys['q'] or held_keys['left shift']: camera.y -= vel_cam
 
-        # Movimiento horizontal SIEMPRE ACTIVO
-        move_dir = Vec3(0, 0, 0)
+        # Sprint / Correr con Shift
+        es_sprint = held_keys['left shift'] or held_keys['right shift'] or held_keys['shift']
+        vel_actual = self.velocidad * 1.75 if es_sprint else self.velocidad
+
+        # Movimiento horizontal (WASD + Flechas)
+        move_x = 0.0
         if camera.parent == self:
-            if held_keys['w'] or held_keys['up arrow']: move_dir += self.forward
-            if held_keys['s'] or held_keys['down arrow']: move_dir += self.back
-            if held_keys['a'] or held_keys['left arrow']: move_dir += self.left
-            if held_keys['d'] or held_keys['right arrow']: move_dir += self.right
+            if held_keys['w'] or held_keys['up arrow']: move_x += (1.0 if self.forward.x >= 0 else -1.0)
+            if held_keys['s'] or held_keys['down arrow']: move_x -= (1.0 if self.forward.x >= 0 else -1.0)
+            if held_keys['d'] or held_keys['right arrow']: move_x += 1.0
+            if held_keys['a'] or held_keys['left arrow']: move_x -= 1.0
         
-        if move_dir.length() > 0:
-            mov_normalizado = move_dir.normalized()
-            self.position += mov_normalizado * self.velocidad * dt
+        if move_x != 0:
+            dir_norm = 1.0 if move_x > 0 else -1.0
+            self.x += dir_norm * vel_actual * dt
             
         self.x = clamp(self.x, -32.0, 32.0)
-        self.z = 0.0  # Fijo en 0 para evitar esquivar por profundidad
+        self.z = 0.0  # Fijo en 0 para mantener la perspectiva 2.5D
 
         escalera_cercana = _obtener_escalera_cercana(self)
         
@@ -223,18 +250,19 @@ class Jugador(Entity):
             self.escalando = True
             self.vel_y = 0
             
-            # Subir o bajar
+            # Subir (W, Espacio, Flecha Arriba) o Bajar (S, Flecha Abajo, Q)
+            vel_escalera = 5.5 * dt if es_sprint else 3.5 * dt
             if camera.parent == self:
-                if held_keys['space']: 
-                    self.y += 3.5 * dt
-                if held_keys['left shift'] or held_keys['q']:
+                if held_keys['w'] or held_keys['space'] or held_keys['up arrow']: 
+                    self.y += vel_escalera
+                if held_keys['s'] or held_keys['down arrow'] or held_keys['q']:
                     ray_abajo = raycast(self.world_position, Vec3(0, -1, 0), distance=DISTANCIA_PISO + 0.1, ignore=(self,))
                     if ray_abajo.hit:
                         self.y = ray_abajo.world_point.y + DISTANCIA_PISO
                         self.en_suelo = True
                         self.escalando = False
                     else:
-                        self.y -= 3.5 * dt
+                        self.y -= vel_escalera
         else:
             self.escalando = False
 
@@ -273,28 +301,31 @@ class Jugador(Entity):
                     continue
 
     def _revisar_colisiones(self):
+        # Revisar si el jugador recoge un martillo
+        for e in scene.entities:
+            if getattr(e, 'type', None) == 'martillo' and not getattr(e, 'recogido', False):
+                if (self.world_position - e.world_position).length() < 2.5:
+                    e.recogido = True
+                    e.collider = None
+                    destroy(e)
+                    
+                    self.tiene_martillo = True
+                    self.pivot_martillo.enabled = True
+                    self.texto_martillo.text = 'MARTILLO: ACTIVO'
+                    self.texto_martillo.color = color.hex('#FFD700')
+                    
+                    if hasattr(self, '_timer_martillo') and self._timer_martillo:
+                        try: destroy(self._timer_martillo)
+                        except: pass
+                    self._timer_martillo = invoke(self._perder_martillo, delay=10)
+                    break
+
         hit_info = self.intersects()
         if not hit_info.hit: return
         e = hit_info.entity
         if not getattr(e, 'type', None): return
 
-        if e.type == 'martillo' and not getattr(e, 'recogido', False):
-            self.tiene_martillo = True
-            self.pivot_martillo.enabled = True
-            e.recogido = True
-            e.collider = None
-            e.parent = self.pivot_martillo
-            e.position = (0, 0, 0)
-            e.rotation = (0, -90, 0)  # Cabeza roja apuntando arriba
-            e.origin = (0, -0.3, 0)  # Pivota desde el punto de agarre (mitad del mango)
-            self.pivot_martillo.rotation_x = 0
-            self.pivot_martillo.rotation_z = 0  # Posición inicial
-            e.scale = 0.0003
-            self.martillo_actual = e
-            
-            invoke(self._perder_martillo, delay=10)
-
-        elif e.type == 'barril' or e.type == 'llama':
+        if e.type == 'barril' or e.type == 'llama':
             if self._invulnerable: return
             if self.tiene_martillo:
                 self._sumar_puntos(500)
@@ -439,11 +470,20 @@ class Jugador(Entity):
                 pantalla_negra.animate_color(color.black, duration=2.0)
                 break
 
+    def _actualizar_ui_vidas(self):
+        for i, icon in enumerate(self.corazones_icons):
+            if i < self.vidas:
+                icon.color = color.hex('#FF2E63')
+                icon.scale = (0.022, 0.022)
+            else:
+                icon.color = color.hex('#2A2A38')
+                icon.scale = (0.016, 0.016)
+
     def _recibir_danio(self):
         if self._invulnerable: return
         self.vidas -= 1
         self._invulnerable = True
-        self.texto_vidas.text = f'VIDA: {self.vidas}'
+        self._actualizar_ui_vidas()
 
         # Animación de muerte en primera persona
         self._en_cinematica = True
@@ -487,6 +527,8 @@ class Jugador(Entity):
         self.tiene_martillo = False
         self._atacando_martillo = False
         self.pivot_martillo.enabled = False
+        self.texto_martillo.text = '🔨 INACTIVO'
+        self.texto_martillo.color = color.hex('#777799')
             
         if getattr(self, 'martillo_actual', None):
             destroy(self.martillo_actual)

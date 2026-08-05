@@ -91,7 +91,7 @@ def construir_nivel():
 
 class MiniMapaNivel2(Entity):
     def __init__(self, jugador):
-        super().__init__(parent=camera.ui, position=(0.75, 0.35), scale=(0.25, 0.25))
+        super().__init__(parent=camera.ui, position=(0.75, 0.22), scale=(0.22, 0.22))
         self.type = 'minimapa'
         self.jugador = jugador
         self.fondo = Entity(parent=self, model='quad', color=color.black66, scale=(1, 1), z=0.1)
@@ -110,9 +110,12 @@ class MiniMapaNivel2(Entity):
             Entity(parent=self.contenedor, model='quad', color=color.orange, scale=(4.0/80.0, 0.02), position=(35.0/80.0, y/35.0), z=0)
             
         # Escaleras
-        for e in scene.entities:
-            if getattr(e, 'type', None) == 'escalera':
-                Entity(parent=self.contenedor, model='quad', color=color.cyan, scale=(1.5/80.0, 5.0/35.0), position=(e.x/80.0, e.y/35.0), z=0)
+        for e in list(scene.entities):
+            try:
+                if getattr(e, 'type', None) == 'escalera':
+                    Entity(parent=self.contenedor, model='quad', color=color.cyan, scale=(1.5/80.0, 5.0/35.0), position=(e.x/80.0, e.y/35.0), z=0)
+            except (AssertionError, Exception):
+                continue
             
         self.marcadores_extra = {}
 
@@ -124,7 +127,7 @@ class MiniMapaNivel2(Entity):
                 self.marcador.x = self.jugador.x / 80.0
                 self.marcador.y = self.jugador.y / 35.0
                 self.contenedor.y = -self.jugador.y / 35.0
-        except AssertionError:
+        except (AssertionError, Exception):
             pass
             
         tipos_colores = {
@@ -133,7 +136,13 @@ class MiniMapaNivel2(Entity):
             'martillo': color.yellow
         }
         
-        entidades_validas = [e for e in scene.entities if getattr(e, 'type', None) in tipos_colores]
+        entidades_validas = []
+        for e in list(scene.entities):
+            try:
+                if getattr(e, 'type', None) in tipos_colores:
+                    entidades_validas.append(e)
+            except (AssertionError, Exception):
+                continue
         
         # Eliminar marcadores huérfanos
         for e in list(self.marcadores_extra.keys()):
