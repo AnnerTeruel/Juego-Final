@@ -109,6 +109,11 @@ class MiniMapaNivel2(Entity):
             Entity(parent=self.contenedor, model='quad', color=color.orange, scale=(4.0/80.0, 0.02), position=(-35.0/80.0, y/35.0), z=0)
             Entity(parent=self.contenedor, model='quad', color=color.orange, scale=(4.0/80.0, 0.02), position=(35.0/80.0, y/35.0), z=0)
             
+        # Escaleras
+        for e in scene.entities:
+            if getattr(e, 'type', None) == 'escalera':
+                Entity(parent=self.contenedor, model='quad', color=color.cyan, scale=(1.5/80.0, 5.0/35.0), position=(e.x/80.0, e.y/35.0), z=0)
+            
         self.marcadores_extra = {}
 
     def update(self):

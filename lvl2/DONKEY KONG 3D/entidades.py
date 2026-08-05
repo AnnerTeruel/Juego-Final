@@ -69,7 +69,7 @@ class Jugador(Entity):
         # Configuración de Primera Persona
         self.rotation_y = 90
         camera.parent = self
-        camera.position = (0, 0.2, 0)
+        camera.position = (0, 0.8, 0)
         camera.rotation = (0, 0, 0)
         # Ocultamos el cubo del jugador con transparencia en lugar de visible=False para no ocultar la mano
         self.color = color.rgba(0, 0, 0, 0)
@@ -79,8 +79,8 @@ class Jugador(Entity):
                                  background=True)
 
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
-        self.tiene_martillo = True
-        self.pivot_martillo = Entity(parent=camera, position=(0.83, -1.02, 0.81), enabled=True)
+        self.tiene_martillo = False
+        self.pivot_martillo = Entity(parent=camera, position=(0.83, -1.02, 0.81), enabled=False)
         self.martillo_rotador = Entity(parent=self.pivot_martillo, rotation=(-189, 103, 188))
         self.martillo_actual = Entity(
             parent=self.martillo_rotador, 
@@ -112,7 +112,7 @@ class Jugador(Entity):
                 camera.rotation = (8, 0, 0)
             else:
                 camera.parent = self
-                camera.position = (0, 0.2, 0)
+                camera.position = (0, 0.8, 0)
                 camera.rotation = (0, 0, 0)
                 camera.rotation_x = 0
 
@@ -227,7 +227,7 @@ class Jugador(Entity):
             e.origin = (0, -0.3, 0)  # Pivota desde el punto de agarre (mitad del mango)
             self.pivot_martillo.rotation_x = 0
             self.pivot_martillo.rotation_z = 0  # Posición inicial
-            e.scale = 0.0005
+            e.scale = 0.0003
             self.martillo_actual = e
             
             invoke(self._perder_martillo, delay=10)
