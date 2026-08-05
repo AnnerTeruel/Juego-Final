@@ -288,15 +288,40 @@ def cargar_estadisticas():
 def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
     try:
         registros = cargar_estadisticas()
-        nuevo = {
-            'id': len(registros) + 1,
-            'nombre': nombre,
-            'puntos': puntos,
-            'tiempo': tiempo,
-            'nivel': nivel,
-            'posicion': posicion
-        }
-        registros.append(nuevo)
+        nombre_clean = str(nombre).strip().lower()
+        existente = None
+
+        for r in registros:
+            if str(r.get('nombre', '')).strip().lower() == nombre_clean:
+                existente = r
+                break
+
+        if existente:
+            # Consolidar puntuación: actualizar si los puntos o el nivel alcanzado es mayor o igual
+            if puntos >= existente.get('puntos', 0):
+                existente['puntos'] = puntos
+                existente['nivel'] = max(nivel, existente.get('nivel', 1))
+                existente['tiempo'] = tiempo
+                if posicion:
+                    existente['posicion'] = posicion
+            elif nivel > existente.get('nivel', 1):
+                existente['nivel'] = nivel
+        else:
+            nuevo = {
+                'id': len(registros) + 1,
+                'nombre': nombre,
+                'puntos': puntos,
+                'tiempo': tiempo,
+                'nivel': nivel,
+                'posicion': posicion
+            }
+            registros.append(nuevo)
+
+        # Reordenar IDs y lista por puntos descendentes
+        registros.sort(key=lambda x: x.get('puntos', 0), reverse=True)
+        for idx, r in enumerate(registros, start=1):
+            r['id'] = idx
+
         with open(RUTA_STATS, 'w', encoding='utf-8') as f:
             json.dump(registros, f, ensure_ascii=False, indent=2)
     except Exception as error:
@@ -424,6 +449,8 @@ def abrir_dialogo_nombre(numero=None):
         dialogo.destroy()
         if numero is not None:
             iniciar_nivel(numero)
+        else:
+            cambiar_pantalla(frame_juego)
 
     btn_aceptar = Button(
         card,
@@ -944,7 +971,7 @@ boton_jugar = Button(
     borderwidth=0,
     highlightthickness=0,
     cursor="hand2",
-    command=lambda: cambiar_pantalla(frame_juego, lambda: abrir_dialogo_nombre())
+    command=lambda: abrir_dialogo_nombre()
 )
 
 boton_jugar.pack(
@@ -1090,17 +1117,19 @@ def iniciar_nivel(numero):
         except Exception:
             pass
 
-        try:
-            dibujar_niveles()
-        except Exception:
-            pass
-
         # Procesar resultado si existe
         if RUTA_RUN_RESULT.exists():
             try:
                 with open(RUTA_RUN_RESULT, 'r', encoding='utf-8') as archivo:
                     resultado = json.load(archivo)
                 if resultado:
+                    if 'nivel_desbloqueado' in resultado:
+                        desb = resultado['nivel_desbloqueado']
+                        st = cargar_estado_niveles()
+                        if desb == 2: st['nivel2'] = True
+                        elif desb == 3: st['nivel3'] = True
+                        guardar_estado_niveles(st)
+                    
                     guardar_estadistica(
                         resultado.get('nombre', nombre_jugador_actual or 'Jugador'),
                         resultado.get('puntos', 0),
@@ -1116,6 +1145,12 @@ def iniciar_nivel(numero):
                     RUTA_RUN_RESULT.unlink()
                 except Exception:
                     pass
+
+        try:
+            cambiar_pantalla(frame_juego)
+            dibujar_niveles()
+        except Exception:
+            pass
 
     # Iniciar animación de cortina para cubrir la ventana y ejecutar el nivel
     animar_cortina_vertical(-alto, 0, on_curtain_closed)
@@ -1203,14 +1238,32 @@ def dibujar_figura_3d(padre, color_principal, color_lateral, color_superior):
 
 
 def crear_tarjeta_nivel(padre, numero, desbloqueado):
-    if desbloqueado:
+    if numero == 3:
+        color_fondo = "#121224"
+        color_borde = "#FFD700"
+        color_texto = "#FFD700"
+        estado = "🛠️ EN DESARROLLO..."
+        texto_boton = "DESARROLLO"
+        estado_boton = NORMAL
+        def _alerta_desarrollo():
+            messagebox.showinfo("NIVEL 3", "¡El Nivel 3 se encuentra actualmente en desarrollo!\n\nEstará disponible muy pronto en la siguiente actualización.")
+        comando = _alerta_desarrollo
+        color_boton = "#FFD700"
+        color_boton_activo = "#FFE555"
+        color_texto_boton = "#0D0D1A"
+        colores_figura = (
+            "#E2E8F0",
+            "#64748B",
+            "#94A3B8"
+        )
+    elif desbloqueado:
         color_fondo = "#151528"
         color_borde = "#00F0FF"
         color_texto = "#FFD700"
         estado = "⚡ DESBLOQUEADO"
         texto_boton = "► JUGAR"
         estado_boton = NORMAL
-        comando = lambda n=numero: iniciar_nivel(n)
+        comando = lambda n=numero: abrir_dialogo_nombre(n) if not nombre_jugador_actual else iniciar_nivel(n)
         color_boton = "#00F0FF"
         color_boton_activo = "#70F8FF"
         color_texto_boton = "#0D0D1A"

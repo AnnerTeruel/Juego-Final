@@ -32,13 +32,12 @@ def _crear_menu(titulo, color_titulo):
 
 def _boton(parent, texto, pos, accion):
     b = Button(
-        parent=parent, text=texto, position=pos, scale=(0.55, 0.10),
+        parent=parent, text=texto, position=pos, scale=(0.48, 0.08),
         color=color.Color(0.10, 0.10, 0.25, 1), highlight_color=color.hex('#00F0FF'),
         pressed_color=color.hex('#FFD700'), text_color=color.white, on_click=accion, z=-0.02
     )
     if hasattr(b, 'text_entity') and b.text_entity:
         b.text_entity.font = 'assets/PressStart2P-Regular.ttf'
-        b.text_entity.scale = 0.65
     return b
 
 def cerrar_menu():

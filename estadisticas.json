@@ -22,5 +22,33 @@
       0.3,
       -0.1
     ]
+  },
+  {
+    "id": 3,
+    "nombre": "111",
+    "puntos": 8400,
+    "tiempo": 0,
+    "nivel": 1,
+    "posicion": null
+  },
+  {
+    "id": 4,
+    "nombre": "111",
+    "puntos": 1211,
+    "tiempo": 0,
+    "nivel": 2,
+    "posicion": null
+  },
+  {
+    "id": 5,
+    "nombre": "Jugador",
+    "puntos": 0,
+    "tiempo": 4.1,
+    "nivel": 1,
+    "posicion": [
+      -23.4,
+      0.3,
+      -0.2
+    ]
   }
 ]

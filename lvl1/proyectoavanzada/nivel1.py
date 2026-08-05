@@ -299,7 +299,6 @@ class GameManager(Entity):
         self.martillo_activo = False
         self.martillo_infinito = False
         self.tiempo_martillo = 0.0
-        self.temporizador_puntos = PENALIZACION_TIEMPO
         self.muerto = False
         self.juego_terminado = False
         camera.rotation = (0, 0, 0)
@@ -988,14 +987,11 @@ class MenuVictoria(Entity):
         reproducir_clic()
         pts = game_manager.puntuacion
         try:
-            with open('run_result.json', 'w') as f:
-                json.dump({'puntos': pts, 'nivel_desbloqueado': 2}, f)
-        except Exception:
-            pass
-            
-        import subprocess, sys
-        cmd = [sys.executable, 'lvl2/DONKEY KONG 3D/main.py', str(pts)]
-        subprocess.Popen(cmd)
+            ruta_res = Path(__file__).resolve().parent.parent.parent / 'run_result.json'
+            with open(ruta_res, 'w', encoding='utf-8') as f:
+                json.dump({'puntos': pts, 'nivel_desbloqueado': 2, 'nivel': 1}, f)
+        except Exception as err:
+            print("Error al guardar resultado Nivel 1:", err)
         application.quit()
 
 # ==========================================
@@ -1166,13 +1162,12 @@ class MenuPausa(Entity):
 
         def _crear_btn(txt, y_pos, fn):
             b = Button(
-                parent=self.menu_card, text=txt, position=(0, y_pos), scale=(0.55, 0.10),
+                parent=self.menu_card, text=txt, position=(0, y_pos), scale=(0.48, 0.08),
                 color=color.Color(0.10, 0.10, 0.25, 1), highlight_color=color.hex('#00F0FF'),
                 pressed_color=color.hex('#FFD700'), text_color=color.white, on_click=fn, z=-0.02
             )
             if hasattr(b, 'text_entity') and b.text_entity:
                 b.text_entity.font = 'assets/PressStart2P-Regular.ttf'
-                b.text_entity.scale = 0.65
             return b
 
         _crear_btn('CONTINUAR', 0.10, self.reanudar)

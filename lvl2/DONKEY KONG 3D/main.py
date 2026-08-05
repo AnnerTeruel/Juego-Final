@@ -49,8 +49,18 @@ def _limpiar_nivel():
 
 
 def iniciar_nivel(puntos=0, nivel=2):
-    global puntos_actuales
+    global puntos_actuales, musica_nivel
     puntos_actuales = puntos
+
+    try:
+        if 'musica_nivel' in globals() and musica_nivel:
+            musica_nivel.volume = 0.35
+            if not getattr(musica_nivel, 'playing', False):
+                musica_nivel.play()
+        else:
+            musica_nivel = Audio('MusicaNivel.wav', loop=True, autoplay=True, volume=0.35)
+    except Exception:
+        pass
 
     _limpiar_nivel()
     construir_nivel()
@@ -77,7 +87,16 @@ def reinicio_nivel(): iniciar_nivel(puntos_actuales)
 
 def reinicio_total(): iniciar_nivel(puntos=0)
 
-def siguiente_nivel(puntos_ganados): iniciar_nivel(puntos=puntos_ganados)
+def siguiente_nivel(puntos_ganados):
+    try:
+        import json, os
+        from pathlib import Path
+        ruta_res = Path(__file__).resolve().parent.parent.parent / 'run_result.json'
+        with open(ruta_res, 'w', encoding='utf-8') as f:
+            json.dump({'puntos': puntos_ganados, 'nivel_desbloqueado': 3, 'nivel': 2}, f)
+    except Exception as err:
+        print("Error al guardar resultado:", err)
+    application.quit()
 
 pausa._reinicio_nivel_ref = reinicio_nivel
 pausa._reinicio_total_ref = reinicio_total

@@ -113,23 +113,8 @@ class Jugador(Entity):
 
         self.texto_martillo = Text(parent=camera.ui, text='MARTILLO: INACTIVO', position=(0.28, 0.478), origin=(0, 0), scale=0.75, font='assets/PressStart2P-Regular.ttf', color=color.hex('#777799'), z=9)
 
-    def destroy_ui(self):
-        try:
-            if hasattr(self, 'hud_fondo') and self.hud_fondo: destroy(self.hud_fondo)
-            if hasattr(self, 'hud_linea') and self.hud_linea: destroy(self.hud_linea)
-            if hasattr(self, 'texto_puntos') and self.texto_puntos: destroy(self.texto_puntos)
-            if hasattr(self, 'lbl_vidas') and self.lbl_vidas: destroy(self.lbl_vidas)
-            if hasattr(self, 'corazones_icons') and self.corazones_icons:
-                for c in self.corazones_icons:
-                    destroy(c)
-                self.corazones_icons = []
-            if hasattr(self, 'texto_martillo') and self.texto_martillo: destroy(self.texto_martillo)
-        except Exception:
-            pass
-
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
         # Empieza oculto; solo se activa cuando el jugador recoge un martillo
-        self.tiene_martillo = False
         self.pivot_martillo = Entity(parent=camera, position=(0.83, -1.02, 0.81), enabled=False)
         self.martillo_rotador = Entity(parent=self.pivot_martillo, rotation=(-189, 103, 188))
         self.martillo_actual = Entity(
@@ -147,6 +132,21 @@ class Jugador(Entity):
             self.audio_salto = Audio('saltar.wav', autoplay=False, loop=False)
         except:
             self.audio_salto = None
+
+    def destroy_ui(self):
+        try:
+            if hasattr(self, 'hud_fondo') and self.hud_fondo: destroy(self.hud_fondo)
+            if hasattr(self, 'hud_linea') and self.hud_linea: destroy(self.hud_linea)
+            if hasattr(self, 'texto_puntos') and self.texto_puntos: destroy(self.texto_puntos)
+            if hasattr(self, 'lbl_vidas') and self.lbl_vidas: destroy(self.lbl_vidas)
+            if hasattr(self, 'corazones_icons') and self.corazones_icons:
+                for c in self.corazones_icons:
+                    destroy(c)
+                self.corazones_icons = []
+            if hasattr(self, 'texto_martillo') and self.texto_martillo: destroy(self.texto_martillo)
+            if hasattr(self, 'pivot_martillo') and self.pivot_martillo: destroy(self.pivot_martillo)
+        except Exception:
+            pass
 
     def _cinematica_inicio(self):
         # Desactivamos el ratón para que el jugador no pueda mover la cámara todavía
@@ -197,9 +197,7 @@ class Jugador(Entity):
 
 
 
-        # Activar victoria (cheat/debug)
-        if key == 'v':
-            self._ganar()
+
 
     def update(self):
         if self._ganando or pausa.esta_pausado() or getattr(self, '_en_cinematica', False): return
@@ -301,29 +299,35 @@ class Jugador(Entity):
                     continue
 
     def _revisar_colisiones(self):
-        # Revisar si el jugador recoge un martillo
+        # Revisar si el jugador recoge un martillo en el suelo
         for e in scene.entities:
             if getattr(e, 'type', None) == 'martillo' and not getattr(e, 'recogido', False):
-                if (self.world_position - e.world_position).length() < 2.5:
-                    e.recogido = True
-                    e.collider = None
-                    destroy(e)
-                    
-                    self.tiene_martillo = True
-                    self.pivot_martillo.enabled = True
-                    self.texto_martillo.text = 'MARTILLO: ACTIVO'
-                    self.texto_martillo.color = color.hex('#FFD700')
-                    
-                    if hasattr(self, '_timer_martillo') and self._timer_martillo:
-                        try: destroy(self._timer_martillo)
-                        except: pass
-                    self._timer_martillo = invoke(self._perder_martillo, delay=10)
-                    break
+                try:
+                    if (self.world_position - e.world_position).length() < 2.5:
+                        e.recogido = True
+                        e.collider = None
+                        destroy(e)
+                        
+                        self.tiene_martillo = True
+                        self.pivot_martillo.enabled = True
+                        self.texto_martillo.text = 'MARTILLO: ACTIVO'
+                        self.texto_martillo.color = color.hex('#FFD700')
+                        
+                        if hasattr(self, '_timer_martillo') and self._timer_martillo:
+                            try: destroy(self._timer_martillo)
+                            except: pass
+                        self._timer_martillo = invoke(self._perder_martillo, delay=10)
+                        break
+                except (AssertionError, Exception):
+                    continue
 
-        hit_info = self.intersects()
+        # Ignorar self y el modelo de martillo equipado en primera persona
+        elementos_ignorados = (self, getattr(self, 'pivot_martillo', None), getattr(self, 'martillo_actual', None))
+        hit_info = self.intersects(ignore=elementos_ignorados)
         if not hit_info.hit: return
         e = hit_info.entity
         if not getattr(e, 'type', None): return
+        if getattr(e, 'recogido', False) or getattr(e, 'destruido', False): return
 
         if e.type == 'barril' or e.type == 'llama':
             if self._invulnerable: return
@@ -346,7 +350,9 @@ class Jugador(Entity):
                 self._recibir_danio()
 
         elif e.type == 'meta':
-            self._ganar()
+            # Solo activa victoria si el jugador está en la plataforma superior de la palanca (Y >= 33)
+            if self.y >= 33.0:
+                self._ganar()
         elif e.type == 'muerte':
             self._recibir_danio()
 
@@ -526,13 +532,11 @@ class Jugador(Entity):
     def _perder_martillo(self):
         self.tiene_martillo = False
         self._atacando_martillo = False
-        self.pivot_martillo.enabled = False
-        self.texto_martillo.text = '🔨 INACTIVO'
-        self.texto_martillo.color = color.hex('#777799')
-            
-        if getattr(self, 'martillo_actual', None):
-            destroy(self.martillo_actual)
-            self.martillo_actual = None
+        if hasattr(self, 'pivot_martillo') and self.pivot_martillo:
+            self.pivot_martillo.enabled = False
+        if hasattr(self, 'texto_martillo') and self.texto_martillo:
+            self.texto_martillo.text = 'MARTILLO: INACTIVO'
+            self.texto_martillo.color = color.hex('#777799')
 
     def _game_over(self):
         # Detener música de fondo y reproducir sonido de derrota
@@ -552,7 +556,7 @@ class Jugador(Entity):
 
 
 def generar_martillos():
-    alturas = [-4.0, 1.0, 6.0, 11.0, 16.0, 21.0, 26.0, 31.0]
+    alturas = [-4.0, 1.0, 6.0, 11.0, 16.0, 21.0, 26.0]
     seleccionadas = random.sample(alturas, 2)
     for y in seleccionadas:
         x = random.uniform(-28.0, 28.0)
