@@ -19,6 +19,20 @@ import threading
 # ==========================================================
 
 CARPETA_PROYECTO = Path(__file__).resolve().parent
+import ctypes
+
+def reproducir_musica_menu():
+    ruta = CARPETA_PROYECTO / "audio" / "MusicaMenu.wav"
+    if ruta.exists():
+        # Usar MCI (Media Control Interface) nativo de Windows, soporta casi todos los formatos
+        # Cerramos cualquier instancia previa
+        ctypes.windll.winmm.mciSendStringW("close musica_menu", None, 0, None)
+        # Abrimos y reproducimos en bucle forzando el tipo mpegvideo por si la extension no coincide con su formato real
+        ctypes.windll.winmm.mciSendStringW(f'open "{ruta}" type mpegvideo alias musica_menu', None, 0, None)
+        ctypes.windll.winmm.mciSendStringW("play musica_menu repeat", None, 0, None)
+
+def detener_musica_menu():
+    ctypes.windll.winmm.mciSendStringW("close musica_menu", None, 0, None)
 
 RUTA_FONDO_MENU = CARPETA_PROYECTO / "assets" / "fondo_juego_sin_sello.png"
 RUTA_PROGRESS = CARPETA_PROYECTO / "progress.json"
@@ -260,8 +274,11 @@ def formatear_posicion(posicion):
 
 def cargar_estadisticas():
     try:
-        # estadisticas_db.migrar_desde_json(RUTA_STATS)
-        # return estadisticas_db.cargar_partidas()
+        if RUTA_STATS.exists():
+            with open(RUTA_STATS, 'r', encoding='utf-8') as f:
+                datos = json.load(f)
+                if isinstance(datos, list):
+                    return datos
         return []
     except Exception as error:
         print(f"Error cargando estadisticas: {error}")
@@ -270,12 +287,20 @@ def cargar_estadisticas():
 
 def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
     try:
-        pass # estadisticas_db.guardar_partida(nombre, puntos, tiempo, nivel, posicion)
+        registros = cargar_estadisticas()
+        nuevo = {
+            'id': len(registros) + 1,
+            'nombre': nombre,
+            'puntos': puntos,
+            'tiempo': tiempo,
+            'nivel': nivel,
+            'posicion': posicion
+        }
+        registros.append(nuevo)
+        with open(RUTA_STATS, 'w', encoding='utf-8') as f:
+            json.dump(registros, f, ensure_ascii=False, indent=2)
     except Exception as error:
         print(f"Error guardando estadisticas: {error}")
-    return
-    if False:
-        print(f"Error guardando estadísticas: {error}")
 
 
 def refrescar_tabla_estadisticas():
@@ -925,6 +950,9 @@ def iniciar_nivel(numero):
     if numero == 1:
         ruta_script = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada" / "nivel1.py"
         directorio_trabajo = CARPETA_PROYECTO / "lvl1" / "proyectoavanzada"
+    elif numero == 2:
+        ruta_script = CARPETA_PROYECTO / "lvl2" / "DONKEY KONG 3D" / "main.py"
+        directorio_trabajo = CARPETA_PROYECTO / "lvl2" / "DONKEY KONG 3D"
     elif numero == 3:
         ruta_script = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python" / "main.py"
         directorio_trabajo = CARPETA_PROYECTO / "lvl3" / "Proyecto_Python"
@@ -939,6 +967,7 @@ def iniciar_nivel(numero):
     alto = max(ventana.winfo_height(), 1)
 
     def on_curtain_closed():
+        detener_musica_menu()
         # Ejecutar el nivel en un hilo para no bloquear la UI
         def run_level():
             try:
@@ -953,6 +982,7 @@ def iniciar_nivel(numero):
 
     def on_level_finished():
         # Mostrar lanzador y asegurar que esté maximizado
+        reproducir_musica_menu()
         try:
             ventana.deiconify()
             try:
@@ -1648,5 +1678,6 @@ pantalla_completa()
 
 ventana.update_idletasks()
 
+reproducir_musica_menu()
 ventana.mainloop()
 

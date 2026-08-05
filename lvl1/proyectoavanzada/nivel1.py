@@ -6,7 +6,13 @@ from ursina.models.procedural.cylinder import Cylinder
 from ursina.models.procedural.cone import Cone
 import random
 import math
+import sys
+import json
+from pathlib import Path
 from direct.actor.Actor import Actor
+
+# Tiempo de inicio para calcular duracion de partida
+_tiempo_inicio_partida = None
 # ==========================================
 # CONSTANTES
 # ==========================================
@@ -43,6 +49,105 @@ en_intro = False
 texto_intro = None
 victoria_cinematica = False
 
+def maximizar_ventana():
+    try:
+        import ctypes
+        hwnd = ctypes.windll.user32.FindWindowW(None, "Donkey Kong 3D - Nivel 1")
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 3)
+            window.clear_size()
+            window.clear_origin()
+    except Exception:
+        pass
+
+def mostrar_controles():
+    """Muestra una guia de controles sin fondo negro, mas ancha y que desaparece a los 5 segundos."""
+    panel = Entity(parent=camera.ui)
+    
+    titulo = Text(
+        parent=panel,
+        text='CONTROLES DEL JUEGO',
+        scale=(3.0, 2.6),
+        origin=(0, 0),
+        position=(0, 0.22),
+        color=color.yellow
+    )
+    
+    controles = [
+        ('W A S D', 'Moverse'),
+        ('ESPACIO', 'Saltar'),
+        ('CLIC IZQ', 'Atacar con martillo'),
+        ('ESPACIO / W', 'Subir escaleras'),
+        ('ESC', 'Pausa'),
+    ]
+    
+    y_offset = 0.10
+    for tecla, descripcion in controles:
+        t1 = Text(
+            parent=panel,
+            text=f'[ {tecla} ]',
+            scale=(2.3, 2.0),
+            origin=(1, 0),
+            position=(-0.02, y_offset),
+            color=color.cyan
+        )
+        t2 = Text(
+            parent=panel,
+            text=descripcion,
+            scale=(2.1, 1.8),
+            origin=(-1, 0),
+            position=(0.02, y_offset),
+            color=color.white
+        )
+        y_offset -= 0.065
+    
+    # Fade in
+    panel.alpha = 0
+    panel.animate('alpha', 1, duration=0.4)
+    
+    def cerrar_controles():
+        panel.animate('alpha', 0, duration=0.5)
+        invoke(destroy, panel, delay=0.55)
+    
+    # Cerrar automaticamente a los 5 segundos
+    invoke(cerrar_controles, delay=5.0)
+
+
+def guardar_resultado_partida():
+    """Guarda el resultado de la partida en run_result.json para que el menu lo lea."""
+    try:
+        if 'game_manager' not in globals():
+            return
+        gm = game_manager
+        nombre = ''
+        if len(sys.argv) > 1:
+            nombre = sys.argv[1]
+        
+        import time as pytime
+        duracion = 0
+        if _tiempo_inicio_partida:
+            duracion = pytime.time() - _tiempo_inicio_partida
+        
+        pos = None
+        if 'jugador' in globals():
+            p = jugador.position
+            pos = [round(p.x, 1), round(p.y, 1), round(p.z, 1)]
+        
+        resultado = {
+            'nombre': nombre or 'Jugador',
+            'puntos': max(gm.puntuacion, 0),
+            'tiempo': round(duracion, 1),
+            'nivel': 1,
+            'posicion': pos
+        }
+        
+        # Guardar en la carpeta del proyecto principal (2 niveles arriba)
+        ruta_resultado = Path(__file__).resolve().parent.parent.parent / 'run_result.json'
+        with open(ruta_resultado, 'w', encoding='utf-8') as f:
+            json.dump(resultado, f, ensure_ascii=False)
+    except Exception as e:
+        print(f'Error guardando resultado: {e}')
+
 def reproducir_clic():
     try:
         # Ursina (Panda3D) cachea el archivo automáticamente. 
@@ -59,6 +164,7 @@ def reproducir_destruir_barril():
 
 def accion_salir():
     reproducir_clic()
+    guardar_resultado_partida()
     application.paused = False # Asegurar que el juego corra para procesar el delay
     invoke(application.quit, delay=0.25) # Delay para dejar que el sonido se escuche antes de cerrar
 
@@ -1163,6 +1269,7 @@ def mostrar_go():
             jugador.cursor.visible = False # Punto rojo marcador oculto
             jugador.mouse_sensitivity = Vec2(40, 40)
             mouse.locked = True
+            invoke(maximizar_ventana, delay=0.1)
             
             def reactivar_fisica():
                 jugador.gravity = 1
@@ -1172,7 +1279,13 @@ def mostrar_go():
             def reactivar_update():
                 global en_intro
                 en_intro = False
+                global _tiempo_inicio_partida
+                import time as pytime
+                _tiempo_inicio_partida = pytime.time()
             invoke(reactivar_update, delay=0.2)
+            
+            # Mostrar controles despues de que la camara termine de posicionarse
+            invoke(mostrar_controles, delay=0.5)
         
         invoke(activar_primera_persona, delay=dur_zoom + 0.05)
 
@@ -1491,12 +1604,6 @@ class GeneradorNivel:
 if __name__ == '__main__':
     app = Ursina(title='Donkey Kong 3D - Nivel 1', development_mode=False, borderless=False, fullscreen=False)
     
-    def maximizar_ventana():
-        import ctypes
-        hwnd = ctypes.windll.user32.FindWindowW(None, "Donkey Kong 3D - Nivel 1")
-        if hwnd:
-            ctypes.windll.user32.ShowWindow(hwnd, 3)
-            
     invoke(maximizar_ventana, delay=1.5)
     
     # IMPORTANTE: Fondo negro absoluto y limpieza de atmósfera para evitar lavado de colores
