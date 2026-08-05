@@ -16,13 +16,12 @@ _tiempo_inicio_partida = None
 # ==========================================
 # CONSTANTES
 # ==========================================
-PUNTUACION_INICIAL = 4000
+PUNTUACION_INICIAL = 0
 SALUD_INICIAL = 2.0 # Corazones
 TIEMPO_MARTILLO_MAX = 15.0
-PENALIZACION_TIEMPO = 10.0
-PENALIZACION_PUNTOS = 50
-PUNTOS_POR_BARRIL = 100
-BONUS_POR_SECUAZ = 10000
+PUNTOS_POR_BARRIL = 500
+PUNTOS_SALTAR_BARRIL = 100
+BONUS_POR_SECUAZ = 1000
 
 DAÑO_BARRIL = 1.0
 VELOCIDAD_BARRIL_CAIDA = 10.0
@@ -200,7 +199,7 @@ class GameManager(Entity):
         self.actualizar_ui()
 
     def actualizar_ui(self):
-        self.texto_puntos.text = f'BONUS: {self.puntuacion}'
+        self.texto_puntos.text = f'PUNTOS: {self.puntuacion}'
         
         vidas_num = int(math.ceil(self.salud_jugador))
         for i, icon in enumerate(self.corazones_icons):
@@ -274,14 +273,13 @@ class GameManager(Entity):
             p = jugador.position
             self.texto_coords.text = f'X:{p.x:.1f}  Y:{p.y:.1f}  Z:{p.z:.1f}'
 
-        # Penalización por tiempo
-        self.temporizador_puntos -= time.dt
-        if self.temporizador_puntos <= 0:
-            self.puntuacion -= PENALIZACION_PUNTOS
-            self.temporizador_puntos = PENALIZACION_TIEMPO
-            self.actualizar_ui()
-            if self.puntuacion <= 0:
-                self.morir()
+        # Salto sobre barriles (+100 pts)
+        if 'jugador' in globals() and not getattr(jugador, 'grounded', True):
+            for b in list(getattr(Barril, 'instancias', [])):
+                if getattr(b, 'activo', False) and not getattr(b, 'saltado', False):
+                    if abs(jugador.x - b.x) < 2.0 and jugador.y > b.y and jugador.y < b.y + 3.5:
+                        b.saltado = True
+                        self.agregar_puntos(100)
 
         # Temporizador del martillo
         if self.martillo_activo:
@@ -989,11 +987,17 @@ class MenuVictoria(Entity):
 
     def accion_siguiente(self):
         reproducir_clic()
-        # Como aún no hay nivel 2, damos un mensaje divertido/épico
-        self.pregunta.text = "¡El Nivel 2 se encuentra en desarrollo! Muy pronto..."
-        self.pregunta.color = color.rgba(255, 255, 0, 255)
-        self.pregunta.animate_scale(1.9, duration=0.2, curve=curve.out_expo)
-        invoke(lambda: self.pregunta.animate_scale(1.8, duration=0.2), delay=0.2)
+        pts = game_manager.puntuacion
+        try:
+            with open('run_result.json', 'w') as f:
+                json.dump({'puntos': pts, 'nivel_desbloqueado': 2}, f)
+        except Exception:
+            pass
+            
+        import subprocess, sys
+        cmd = [sys.executable, 'lvl2/DONKEY KONG 3D/main.py', str(pts)]
+        subprocess.Popen(cmd)
+        application.quit()
 
 # ==========================================
 # MINIMAPA

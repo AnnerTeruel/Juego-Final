@@ -83,7 +83,13 @@ pausa._reinicio_nivel_ref = reinicio_nivel
 pausa._reinicio_total_ref = reinicio_total
 pausa._siguiente_nivel_ref = siguiente_nivel
 
-iniciar_nivel()
+import sys
+pts_ini = 0
+if len(sys.argv) > 1:
+    try: pts_ini = int(sys.argv[1])
+    except: pts_ini = 0
+
+iniciar_nivel(puntos=pts_ini)
 
 def input(key):
     if key == 'escape':
