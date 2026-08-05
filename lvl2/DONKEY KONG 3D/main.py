@@ -1,5 +1,5 @@
 from ursina import (
-    Ursina, camera, window, color, DirectionalLight, AmbientLight, Text, Vec3, scene, destroy
+    Ursina, camera, window, color, DirectionalLight, AmbientLight, Text, Vec3, scene, destroy, Audio
 )
 from mapa import construir_nivel, MiniMapaNivel2
 from entidades import Jugador, Meta, generar_martillos
@@ -9,6 +9,9 @@ import pausa
 app = Ursina(title='Diddy Kong - Nivel 2', borderless=False, fullscreen=True, development_mode=False)
 window.color = color.Color(0.05, 0.05, 0.15, 1)
 window.exit_button.visible = False
+
+# Música de fondo del nivel (loop, volumen bajo para no tapar efectos)
+musica_nivel = Audio('MusicaNivel.wav', loop=True, autoplay=True, volume=0.35)
 
 # Iluminación
 luz = DirectionalLight()

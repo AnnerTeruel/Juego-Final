@@ -65,15 +65,15 @@ def construir_nivel():
     # Crear los pisos con huecos donde suben las escaleras del piso inferior
     # El piso 0 se extiende hasta -34 y 34 para que atrape los barriles que caen de las plataformas laterales y no caigan al vacío.
     crear_piso_con_huecos(y_levels[0], -34, 34, [])
-    crear_piso_con_huecos(y_levels[1], -30, 30, escaleras_por_piso[0])
-    crear_piso_con_huecos(y_levels[2], -30, 30, escaleras_por_piso[1])
-    crear_piso_con_huecos(y_levels[3], -30, 30, escaleras_por_piso[2])
-    crear_piso_con_huecos(y_levels[4], -30, 30, escaleras_por_piso[3])
-    crear_piso_con_huecos(y_levels[5], -30, 30, escaleras_por_piso[4])
-    crear_piso_con_huecos(y_levels[6], -30, 30, escaleras_por_piso[5])
-    crear_piso_con_huecos(y_levels[7], -30, 30, escaleras_por_piso[6])
-    crear_piso_con_huecos(y_levels[8], -30, 30, escaleras_por_piso[7])
-    crear_piso_con_huecos(y_levels[9], -30, 30, escaleras_por_piso[8])
+    crear_piso_con_huecos(y_levels[1], -28, 28, escaleras_por_piso[0])
+    crear_piso_con_huecos(y_levels[2], -28, 28, escaleras_por_piso[1])
+    crear_piso_con_huecos(y_levels[3], -28, 28, escaleras_por_piso[2])
+    crear_piso_con_huecos(y_levels[4], -28, 28, escaleras_por_piso[3])
+    crear_piso_con_huecos(y_levels[5], -28, 28, escaleras_por_piso[4])
+    crear_piso_con_huecos(y_levels[6], -28, 28, escaleras_por_piso[5])
+    crear_piso_con_huecos(y_levels[7], -28, 28, escaleras_por_piso[6])
+    crear_piso_con_huecos(y_levels[8], -28, 28, escaleras_por_piso[7])
+    crear_piso_con_huecos(y_levels[9], -28, 28, escaleras_por_piso[8])
 
     # Crear las escaleras
     for piso, xs in escaleras_por_piso.items():

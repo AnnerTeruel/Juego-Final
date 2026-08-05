@@ -1,7 +1,7 @@
 from ursina import (
     Entity, color, held_keys, time, Text, destroy,
     Vec3, raycast, clamp, invoke, scene, mouse, camera, EditorCamera,
-    Sequence, Func, curve
+    Sequence, Func, curve, Audio
 )
 import pausa
 import config
@@ -43,13 +43,39 @@ class Martillo(Entity):
 
 class Meta(Entity):
     def __init__(self, posicion):
-        super().__init__(model='cube', color=color.violet, scale=(1.0, 1.4, 1.0), position=posicion, collider='box')
+        # Colisionador invisible para la detección de victoria
+        super().__init__(model='cube', color=color.rgba(0,0,0,0), scale=(1.2, 2.0, 1.2),
+                         position=posicion, collider='box')
         self.type = 'meta'
+        # Modelo visual de la palanca — estático, sobre la plataforma
+        self.visual = Entity(
+            parent=self,
+            model='palanca level 2.glb',
+            scale=0.45,
+            position=(0, -0.5, 0),
+            color=color.white
+        )
+
+
+class ParticulaBarril(Entity):
+    def __init__(self, posicion):
+        super().__init__(model='cube', color=color.brown, scale=random.uniform(0.15, 0.3), position=posicion)
+        self.vel = Vec3(random.uniform(-5, 5), random.uniform(4, 10), random.uniform(-5, 5))
+        self.rot_vel = Vec3(random.uniform(-400, 400), random.uniform(-400, 400), random.uniform(-400, 400))
+        invoke(destroy, self, delay=0.6)
+        
+    def update(self):
+        if pausa.esta_pausado(): return
+        dt = time.dt
+        self.vel.y -= 25 * dt  # Gravedad
+        self.position += self.vel * dt
+        self.rotation += self.rot_vel * dt
 
 
 class Jugador(Entity):
     def __init__(self, posicion):
         super().__init__(position=posicion, collider='box', model='cube', scale=(0.7, 0.8, 0.7), color=color.blue)
+        self.type = 'jugador'
         self.vel_y = 0.0
         self.en_suelo = False
         self.escalando = False
@@ -79,6 +105,7 @@ class Jugador(Entity):
                                  background=True)
 
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
+        # Empieza oculto; solo se activa cuando el jugador recoge un martillo
         self.tiene_martillo = False
         self.pivot_martillo = Entity(parent=camera, position=(0.83, -1.02, 0.81), enabled=False)
         self.martillo_rotador = Entity(parent=self.pivot_martillo, rotation=(-189, 103, 188))
@@ -92,6 +119,11 @@ class Jugador(Entity):
 
         mouse.locked = True
         mouse.visible = False
+        
+        try:
+            self.audio_salto = Audio('saltar.wav', autoplay=False, loop=False)
+        except:
+            self.audio_salto = None
 
     def input(self, key):
         if key == 'left mouse down' and self.tiene_martillo and not getattr(self, '_atacando_martillo', False):
@@ -102,6 +134,11 @@ class Jugador(Entity):
                 self.vel_y = FUERZA_SALTO
                 self.en_suelo = False
                 self.escalando = False
+                if getattr(self, 'audio_salto', None):
+                    try:
+                        self.audio_salto.play()
+                    except:
+                        pass
             elif key == 'space up' and self.vel_y > 0:
                 self.vel_y *= 0.5
 
@@ -236,6 +273,18 @@ class Jugador(Entity):
             if self._invulnerable: return
             if self.tiene_martillo:
                 self._sumar_puntos(500)
+                e.collider = None
+                e.destruido = True
+                
+                # Sonido de destrucción del barril
+                try:
+                    Audio('destruirBarril.wav', autoplay=True, auto_destroy=True, volume=1.0)
+                except:
+                    pass
+                
+                for _ in range(8):
+                    ParticulaBarril(e.world_position)
+                    
                 destroy(e)
             else:
                 self._recibir_danio()
@@ -278,7 +327,73 @@ class Jugador(Entity):
         if self._ganando: return
         self._ganando = True
         self._sumar_puntos(1000)
-        pausa.mostrar_victoria(self.puntos)
+        # Detener música de fondo y reproducir fanfarria de victoria
+        try:
+            for e in scene.entities:
+                if hasattr(e, 'clip') and getattr(e, 'loop', False):
+                    e.stop()
+            Audio('Ganar.wav', autoplay=True, auto_destroy=True, volume=1.0)
+        except:
+            pass
+        # Bloquear ratón y liberar cámara para la cinemática
+        mouse.locked = False
+        mouse.visible = True
+        camera.parent = scene
+        invoke(self._cinematica_victoria, delay=0.1)
+
+    def _cinematica_victoria(self):
+        # Recopilar plataformas LATERALES (x > 30 ó x < -30) ordenadas de menor a mayor Y
+        vigas_lat = sorted(
+            [e for e in scene.entities
+             if getattr(e, 'type', None) == 'viga' and abs(e.x) > 30],
+            key=lambda e: e.y
+        )
+
+        # Agrupar por nivel Y (izquierda y derecha del mismo piso)
+        niveles = {}
+        for v in vigas_lat:
+            nivel = round(v.y, 1)
+            niveles.setdefault(nivel, []).append(v)
+
+        niveles_ordenados = sorted(niveles.items())   # de abajo hacia arriba
+
+        DURACION_POR_PISO = 0.5   # segundos por plataforma, más rápido
+        delay = 0.0
+
+        # Mover la cámara para ver todo el nivel (centro aprox y=11, lejos en z)
+        cam_pos_global = Vec3(0, 11, -85)
+        invoke(self._mover_camara_a, cam_pos_global, duration=1.5, delay=delay)
+        delay += 1.5
+
+        # Destruir plataformas de abajo hacia arriba
+        for i, (y_nivel, vigas_grupo) in enumerate(niveles_ordenados):
+            # Destruir las vigas del nivel con escala → 0
+            invoke(self._destruir_grupo, vigas_grupo, delay=delay)
+            delay += DURACION_POR_PISO
+
+        # Activar gravedad en el enemigo para que caiga
+        invoke(self._activar_gravedad_enemigo, delay=delay)
+        delay += 2.0
+
+        # Mostrar victoria tras la cinemática
+        invoke(pausa.mostrar_victoria, self.puntos, delay=delay)
+
+    def _mover_camara_a(self, pos, duration=0.5):
+        camera.animate_position(pos, duration=duration, curve=curve.in_out_sine)
+        camera.animate_rotation((0, 0, 0), duration=duration)
+
+    def _destruir_grupo(self, vigas):
+        for v in vigas:
+            try:
+                v.animate_scale_y(0, duration=0.35, curve=curve.out_expo)
+                invoke(destroy, v, delay=0.4)
+            except Exception:
+                pass
+
+    def _activar_gravedad_enemigo(self):
+        for e in scene.entities:
+            if getattr(e, 'type', None) == 'enemigo':
+                e.cayendo = True
 
     def _recibir_danio(self):
         if self._invulnerable: return
@@ -313,6 +428,15 @@ class Jugador(Entity):
             self.martillo_actual = None
 
     def _game_over(self):
+        # Detener música de fondo y reproducir sonido de derrota
+        try:
+            from ursina import scene
+            for e in scene.entities:
+                if hasattr(e, 'clip') and getattr(e, 'loop', False):
+                    e.stop()
+            Audio('Perder.wav', autoplay=True, auto_destroy=True, volume=1.0)
+        except:
+            pass
         pausa.mostrar_game_over()
 
     def on_destroy(self):
