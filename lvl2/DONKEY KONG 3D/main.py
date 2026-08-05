@@ -1,12 +1,21 @@
-from ursina import (
-    Ursina, camera, window, color, DirectionalLight, AmbientLight, Text, Vec3, scene, destroy, Audio
-)
+from ursina import *    
 from mapa import construir_nivel, MiniMapaNivel2
 from entidades import Jugador, Meta, generar_martillos
 from enemigos import DiddyKong, BarrilAceite
 import pausa
 
-app = Ursina(title='Diddy Kong - Nivel 2', borderless=False, fullscreen=True, development_mode=False)
+app = Ursina(title='Diddy Kong - Nivel 2', borderless=False, fullscreen=False, development_mode=False)
+
+def maximizar_ventana():
+    import ctypes
+    hwnd = ctypes.windll.user32.FindWindowW(None, "Diddy Kong - Nivel 2")
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 3)
+        window.clear_size()
+        window.clear_origin()
+
+invoke(maximizar_ventana, delay=1.5)
+
 window.color = color.Color(0.05, 0.05, 0.15, 1)
 window.exit_button.visible = False
 
