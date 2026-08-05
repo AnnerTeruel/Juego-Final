@@ -128,9 +128,6 @@ class GameManager(Entity):
         camera.animate_rotation((-20, 0, 80), duration=1.2, curve=curve.out_bounce)
         camera.animate_position((0, -1.0, -0.5), duration=1.0, curve=curve.out_quad)
         
-        # Efecto de viñeta/flash rojo al morir para más impacto visual
-        Entity(parent=camera.ui, model='quad', color=color.rgba(255, 0, 0, 150), scale=(2,2), z=-1).animate_color(color.rgba(255, 0, 0, 0), duration=1.5, curve=curve.out_expo)
-                
         # Llamar al Game Over con retraso
         invoke(menu_game_over.mostrar, delay=1.5)
 
@@ -810,7 +807,7 @@ class MenuVictoria(Entity):
         # Reproducir sonido de victoria y detener soundtrack
         try:
             if 'soundtrack' in globals() and soundtrack:
-                soundtrack.pause()
+                soundtrack.volume = 0
             Audio('assets/Ganar.wav', autoplay=True, loop=False)
         except:
             pass
@@ -981,7 +978,7 @@ class MenuGameOver(Entity):
         # Detener la música de fondo y reproducir sonido de derrota
         try:
             if 'soundtrack' in globals() and soundtrack:
-                soundtrack.pause()
+                soundtrack.volume = 0
             Audio('assets/Perder.wav', autoplay=True, loop=False)
         except:
             pass
@@ -1238,7 +1235,6 @@ def reiniciar_juego():
     mouse.visible = False
     
     if 'soundtrack' in globals() and soundtrack:
-        soundtrack.resume()
         soundtrack.volume = 0.5
         
     camera.parent = jugador.camera_pivot
