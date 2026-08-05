@@ -344,74 +344,50 @@ def abrir_dialogo_nombre(numero=None):
     global nombre_jugador_actual
 
     dialogo = Toplevel(ventana)
-    dialogo.title("REGISTRO DE JUGADOR")
-    dialogo.configure(bg="#0A0A16")
+    dialogo.title("Nombre Del Jugador")
+    dialogo.configure(bg="black")
     dialogo.resizable(False, False)
     dialogo.grab_set()
     dialogo.transient(ventana)
 
-    ancho_dialogo = 440
-    alto_dialogo = 250
+    ancho_dialogo = 400
+    alto_dialogo = 220
     dialogo.geometry(f"{ancho_dialogo}x{alto_dialogo}")
     dialogo.update_idletasks()
     x = ventana.winfo_x() + (ventana.winfo_width() - ancho_dialogo) // 2
     y = ventana.winfo_y() + (ventana.winfo_height() - alto_dialogo) // 2
     dialogo.geometry(f"{ancho_dialogo}x{alto_dialogo}+{x}+{y}")
 
-    # Marco interno de tarjeta
-    card = Frame(dialogo, bg="#121224", highlightthickness=2, highlightbackground="#FFD700", bd=0)
-    card.pack(fill="both", expand=True, padx=12, pady=12)
-
     Label(
-        card,
-        text="INGRESA TU NOMBRE",
-        font=("Trebuchet MS", 16, "bold"),
-        fg="#FFD700",
-        bg="#121224"
-    ).pack(pady=(18, 6))
-
-    Label(
-        card,
-        text="Tu puntuación quedará registrada en el Ranking",
-        font=("Arial", 10),
-        fg="#8888AA",
-        bg="#121224"
-    ).pack(pady=(0, 14))
+        dialogo,
+        text="Nombre Del Jugador",
+        font=("Arial", 16, "bold"),
+        fg="white",
+        bg="black"
+    ).pack(pady=(20, 10))
 
     placeholder = "Nombre Del Jugador"
-    entrada_nombre = Entry(
-        card,
-        font=("Trebuchet MS", 15),
-        width=22,
-        fg="#00F0FF",
-        bg="#0A0A16",
-        insertbackground="#00F0FF",
-        relief="flat",
-        highlightthickness=2,
-        highlightbackground="#00F0FF",
-        justify="center"
-    )
+    entrada_nombre = Entry(dialogo, font=("Arial", 16), width=24, fg="#999999")
     if nombre_jugador_actual:
         entrada_nombre.insert(0, nombre_jugador_actual)
-        entrada_nombre.config(fg="#00F0FF")
+        entrada_nombre.config(fg="black")
     else:
         entrada_nombre.insert(0, placeholder)
-        entrada_nombre.config(fg="#666688")
 
     def limpiar_placeholder(event=None):
         if entrada_nombre.get() == placeholder:
             entrada_nombre.delete(0, END)
-            entrada_nombre.config(fg="#00F0FF")
+            entrada_nombre.config(fg="black")
 
     def restaurar_placeholder(event=None):
         if entrada_nombre.get().strip() == "":
             entrada_nombre.delete(0, END)
             entrada_nombre.insert(0, placeholder)
-            entrada_nombre.config(fg="#666688")
+            entrada_nombre.config(fg="#999999")
 
     entrada_nombre.bind('<FocusIn>', limpiar_placeholder)
     entrada_nombre.bind('<FocusOut>', restaurar_placeholder)
-    entrada_nombre.pack(pady=(0, 18))
+    entrada_nombre.pack(pady=(0, 20))
     entrada_nombre.focus()
 
     def iniciar_desde_dialogo():
@@ -425,20 +401,19 @@ def abrir_dialogo_nombre(numero=None):
         if numero is not None:
             iniciar_nivel(numero)
 
-    btn_aceptar = Button(
-        card,
-        text="►  CONFIRMAR Y JUGAR",
-        font=("Trebuchet MS", 13, "bold"),
-        width=22,
+    Button(
+        dialogo,
+        text="Aceptar",
+        font=("Arial", 14, "bold"),
+        width=12,
         bg="#FFD700",
-        fg="#0A0A16",
-        activebackground="#FFE555",
-        activeforeground="#0A0A16",
+        fg="black",
+        activebackground="#FFC300",
+        activeforeground="black",
         borderwidth=0,
         cursor="hand2",
         command=iniciar_desde_dialogo
-    )
-    btn_aceptar.pack(pady=(0, 15))
+    ).pack(pady=(0, 20))
 
     dialogo.bind('<Return>', lambda event: iniciar_desde_dialogo())
 
@@ -860,32 +835,17 @@ frame_menu.bind(
 
 menu_centro = Frame(
     frame_menu,
-    bg="#0D0D1A",
-    highlightthickness=2,
-    highlightbackground="#FFD700",
-    bd=0,
-    padx=40,
-    pady=30
+    bg=COLOR_MENU
 )
 
 Label(
     menu_centro,
-    text="DONKEY KONG 3D",
-    font=("Impact", 42),
-    bg="#0D0D1A",
+    text="",
+    font=("Arial", 36, "bold"),
+    bg=COLOR_MENU,
     fg="#FFD700"
 ).pack(
-    pady=(5, 0)
-)
-
-Label(
-    menu_centro,
-    text="★  A R C A D E   E D I T I O N  ★",
-    font=("Trebuchet MS", 12, "bold"),
-    bg="#0D0D1A",
-    fg="#00F0FF"
-).pack(
-    pady=(0, 25)
+    pady=(10, 25)
 )
 
 
@@ -895,22 +855,23 @@ Label(
 
 boton_jugar = Button(
     menu_centro,
-    text="►  J U G A R",
-    font=("Trebuchet MS", 18, "bold"),
-    width=20,
+    text="JUGAR",
+    font=("Arial", 20, "bold"),
+    width=18,
     height=2,
     bg="#FFD700",
-    fg="#0D0D1A",
-    activebackground="#FFE555",
-    activeforeground="#0D0D1A",
+    fg="black",
+    activebackground="#FFC300",
+    activeforeground="black",
     borderwidth=0,
     highlightthickness=0,
     cursor="hand2",
     command=lambda: cambiar_pantalla(frame_juego, lambda: abrir_dialogo_nombre())
 )
 
+
 boton_jugar.pack(
-    pady=10
+    pady=8
 )
 
 
@@ -920,14 +881,14 @@ boton_jugar.pack(
 
 boton_estadisticas = Button(
     menu_centro,
-    text="★  ESTADÍSTICAS",
-    font=("Trebuchet MS", 18, "bold"),
-    width=20,
+    text="ESTADÍSTICAS",
+    font=("Arial", 20, "bold"),
+    width=18,
     height=2,
-    bg="#00F0FF",
-    fg="#0D0D1A",
-    activebackground="#70F8FF",
-    activeforeground="#0D0D1A",
+    bg="white",
+    fg="black",
+    activebackground="#DCDCDC",
+    activeforeground="black",
     borderwidth=0,
     highlightthickness=0,
     cursor="hand2",
@@ -935,7 +896,7 @@ boton_estadisticas = Button(
 )
 
 boton_estadisticas.pack(
-    pady=10
+    pady=12
 )
 
 
@@ -945,13 +906,13 @@ boton_estadisticas.pack(
 
 boton_salir = Button(
     menu_centro,
-    text="✕  SALIR",
-    font=("Trebuchet MS", 18, "bold"),
-    width=20,
+    text="SALIR",
+    font=("Arial", 20, "bold"),
+    width=18,
     height=2,
-    bg="#FF0055",
+    bg="#E53935",
     fg="white",
-    activebackground="#FF4D79",
+    activebackground="#B71C1C",
     activeforeground="white",
     borderwidth=0,
     highlightthickness=0,
@@ -970,32 +931,17 @@ boton_salir.pack(
 
 juego_centro = Frame(
     frame_juego,
-    bg="#0D0D1A",
-    highlightthickness=2,
-    highlightbackground="#00F0FF",
-    bd=0,
-    padx=40,
-    pady=30
+    bg="black"
 )
 
 Label(
     juego_centro,
     text="SELECCIONAR NIVEL",
-    font=("Impact", 40),
+    font=("Arial", 38, "bold"),
     fg="#FFD700",
-    bg="#0D0D1A"
+    bg="black"
 ).pack(
-    pady=(5, 0)
-)
-
-Label(
-    juego_centro,
-    text="★  E L I G E   T U   D E S A F Í O  ★",
-    font=("Trebuchet MS", 12, "bold"),
-    fg="#00F0FF",
-    bg="#0D0D1A"
-).pack(
-    pady=(0, 25)
+    pady=(10, 25)
 )
 
 
@@ -1166,16 +1112,16 @@ def dibujar_figura_3d(padre, color_principal, color_lateral, color_superior):
 
 def crear_tarjeta_nivel(padre, numero, desbloqueado):
     if desbloqueado:
-        color_fondo = "#151528"
-        color_borde = "#00F0FF"
-        color_texto = "#FFD700"
-        estado = "⚡ DESBLOQUEADO"
-        texto_boton = "► JUGAR"
+        color_fondo = "#1F2937"
+        color_borde = "#FFD700"
+        color_texto = "white"
+        estado = "DESBLOQUEADO"
+        texto_boton = "JUGAR"
         estado_boton = NORMAL
         comando = lambda n=numero: iniciar_nivel(n)
-        color_boton = "#00F0FF"
-        color_boton_activo = "#70F8FF"
-        color_texto_boton = "#0D0D1A"
+        color_boton = "#FFD700"
+        color_boton_activo = "#FFC300"
+        color_texto_boton = "black"
         colores_figura = (
             "#FACC15",
             "#D97706",
@@ -1183,33 +1129,33 @@ def crear_tarjeta_nivel(padre, numero, desbloqueado):
         )
 
     else:
-        color_fondo = "#0F0F1A"
-        color_borde = "#333355"
-        color_texto = "#666688"
-        estado = "🔒 BLOQUEADO"
+        color_fondo = "#111827"
+        color_borde = "#4B5563"
+        color_texto = "#9CA3AF"
+        estado = "BLOQUEADO"
         texto_boton = "BLOQUEADO"
         estado_boton = DISABLED
         comando = None
-        color_boton = "#222238"
-        color_boton_activo = "#222238"
-        color_texto_boton = "#666688"
+        color_boton = "#374151"
+        color_boton_activo = "#374151"
+        color_texto_boton = "#9CA3AF"
         colores_figura = (
-            "#475569",
-            "#1E293B",
-            "#64748B"
+            "#64748B",
+            "#334155",
+            "#94A3B8"
         )
 
     tarjeta = Frame(
         padre,
-        bg="#0D0D1A",
+        bg="black",
         bd=0
     )
 
     linea_izquierda = Frame(
         tarjeta,
         bg=color_borde,
-        width=5,
-        height=190
+        width=6,
+        height=185
     )
 
     linea_izquierda.grid(
@@ -1222,15 +1168,13 @@ def crear_tarjeta_nivel(padre, numero, desbloqueado):
         tarjeta,
         bg=color_fondo,
         width=330,
-        height=190,
-        highlightthickness=1,
-        highlightbackground=color_borde
+        height=185
     )
 
     contenido.grid(
         row=0,
         column=1,
-        padx=8
+        padx=12
     )
 
     contenido.grid_propagate(False)
@@ -1238,8 +1182,8 @@ def crear_tarjeta_nivel(padre, numero, desbloqueado):
     linea_derecha = Frame(
         tarjeta,
         bg=color_borde,
-        width=5,
-        height=190
+        width=6,
+        height=185
     )
 
     linea_derecha.grid(
@@ -1250,20 +1194,18 @@ def crear_tarjeta_nivel(padre, numero, desbloqueado):
 
     espacio_imagen = Frame(
         contenido,
-        bg="#0A0A16",
+        bg="#020617",
         width=118,
         height=128,
-        bd=1,
-        relief="solid",
-        highlightthickness=1,
-        highlightbackground=color_borde
+        bd=2,
+        relief="solid"
     )
 
     espacio_imagen.grid(
         row=0,
         column=0,
         rowspan=3,
-        padx=(16, 12),
+        padx=(18, 14),
         pady=28
     )
 
@@ -1279,33 +1221,33 @@ def crear_tarjeta_nivel(padre, numero, desbloqueado):
     Label(
         contenido,
         text=f"NIVEL {numero}",
-        font=("Impact", 24),
+        font=("Arial", 24, "bold"),
         bg=color_fondo,
         fg=color_texto
     ).grid(
         row=0,
         column=1,
         sticky="w",
-        pady=(28, 4)
+        pady=(34, 6)
     )
 
     Label(
         contenido,
         text=estado,
-        font=("Trebuchet MS", 11, "bold"),
+        font=("Arial", 12, "bold"),
         bg=color_fondo,
         fg=color_borde
     ).grid(
         row=1,
         column=1,
         sticky="w",
-        pady=(0, 16)
+        pady=(0, 18)
     )
 
     Button(
         contenido,
         text=texto_boton,
-        font=("Trebuchet MS", 13, "bold"),
+        font=("Arial", 13, "bold"),
         width=13,
         bg=color_boton,
         fg=color_texto_boton,
@@ -1340,18 +1282,18 @@ dibujar_niveles()
 
 Button(
     juego_centro,
-    text="◄  VOLVER AL MENÚ",
-    font=("Trebuchet MS", 15, "bold"),
-    width=20,
-    bg="#FF0055",
-    fg="white",
-    activebackground="#FF4D79",
-    activeforeground="white",
+    text="Volver al menú",
+    font=("Arial", 18, "bold"),
+    width=18,
+    bg="white",
+    fg="black",
+    activebackground="#DCDCDC",
+    activeforeground="black",
     borderwidth=0,
     cursor="hand2",
     command=lambda: cambiar_pantalla(frame_menu)
 ).pack(
-    pady=25
+    pady=30
 )
 
 
@@ -1361,32 +1303,27 @@ Button(
 
 estadistica_centro = Frame(
     frame_estadisticas,
-    bg="#0D0D1A",
-    highlightthickness=2,
-    highlightbackground="#FFD700",
-    bd=0,
-    padx=40,
-    pady=25
+    bg="#0F172A"
 )
 
 Label(
     estadistica_centro,
-    text="RANKING DE JUGADORES",
-    font=("Impact", 40),
-    bg="#0D0D1A",
+    text="ESTADÍSTICAS DE JUGADORES",
+    font=("Arial", 42, "bold"),
+    bg="#0F172A",
     fg="#FFD700"
 ).pack(
-    pady=(5, 0)
+    pady=(0, 12)
 )
 
 Label(
     estadistica_centro,
-    text="★  M E J O R E S   P U N T U A C I O N E S  ★",
-    font=("Trebuchet MS", 12, "bold"),
-    bg="#0D0D1A",
-    fg="#00F0FF"
+    text="Mejores puntuaciones",
+    font=("Arial", 18, "bold"),
+    bg="#0F172A",
+    fg="#E5E7EB"
 ).pack(
-    pady=(0, 20)
+    pady=(0, 28)
 )
 
 
@@ -1403,34 +1340,34 @@ except TclError:
 
 estilo_tabla.configure(
     "Estadisticas.Treeview",
-    font=("Trebuchet MS", 13),
-    rowheight=40,
-    background="#121224",
-    foreground="#FFFFFF",
-    fieldbackground="#121224",
-    bordercolor="#333355",
+    font=("Arial", 14),
+    rowheight=38,
+    background="#F3F4F6",
+    foreground="#111827",
+    fieldbackground="#F3F4F6",
+    bordercolor="#334155",
     borderwidth=0,
     relief="flat"
 )
 
 estilo_tabla.configure(
     "Estadisticas.Treeview.Heading",
-    font=("Trebuchet MS", 14, "bold"),
-    background="#1E1B4B",
-    foreground="#FFD700",
-    padding=(10, 10),
-    bordercolor="#333355",
-    borderwidth=1,
+    font=("Arial", 17, "bold"),
+    background="#FFD400",
+    foreground="#111827",
+    padding=(10, 12),
+    bordercolor="#334155",
+    borderwidth=2,
     relief="solid"
 )
 
 estilo_tabla.map(
     "Estadisticas.Treeview",
     background=[
-        ("selected", "#00F0FF")
+        ("selected", "#38BDF8")
     ],
     foreground=[
-        ("selected", "#0D0D1A")
+        ("selected", "#111827")
     ]
 )
 
@@ -1568,12 +1505,12 @@ tabla_estadisticas.column(
 
 tabla_estadisticas.tag_configure(
     "fila_impar",
-    background="#16162D"
+    background="#F3F4F6"
 )
 
 tabla_estadisticas.tag_configure(
     "fila_par",
-    background="#1C1C38"
+    background="#E5E7EB"
 )
 
 
@@ -1627,71 +1564,53 @@ refrescar_tabla_estadisticas()
 
 contenedor_botones_estadisticas = Frame(
     estadistica_centro,
-    bg="#0D0D1A"
+    bg="#0F172A"
 )
 
 contenedor_botones_estadisticas.pack(
-    pady=(10, 0)
+    pady=(2, 0)
 )
 
 Button(
     contenedor_botones_estadisticas,
-    text="✕ Eliminar seleccionado",
-    font=("Trebuchet MS", 13, "bold"),
-    width=20,
+    text="Eliminar\nseleccionado",
+    font=("Arial", 14, "bold"),
+    width=15,
     height=1,
-    pady=6,
-    bg="#FF0055",
+    pady=4,
+    bg="#E74C3C",
     fg="white",
-    activebackground="#FF4D79",
+    activebackground="#C0392B",
     activeforeground="white",
-    borderwidth=0,
+    borderwidth=3,
+    relief="raised",
     cursor="hand2",
     command=eliminar_estadistica
 ).grid(
     row=0,
     column=0,
-    padx=10
+    padx=16
 )
 
 Button(
     contenedor_botones_estadisticas,
-    text="🗑 Limpiar tabla",
-    font=("Trebuchet MS", 13, "bold"),
-    width=16,
+    text="Limpiar tabla",
+    font=("Arial", 14, "bold"),
+    width=12,
     height=1,
-    pady=6,
+    pady=4,
     bg="#F39C12",
-    fg="#0D0D1A",
-    activebackground="#F5B041",
-    activeforeground="#0D0D1A",
-    borderwidth=0,
+    fg="black",
+    activebackground="#D68910",
+    activeforeground="black",
+    borderwidth=3,
+    relief="raised",
     cursor="hand2",
     command=limpiar_estadisticas
 ).grid(
     row=0,
     column=1,
-    padx=10
-)
-
-Button(
-    contenedor_botones_estadisticas,
-    text="◄ Volver al menú",
-    font=("Trebuchet MS", 13, "bold"),
-    width=16,
-    height=1,
-    pady=6,
-    bg="#00F0FF",
-    fg="#0D0D1A",
-    activebackground="#70F8FF",
-    activeforeground="#0D0D1A",
-    borderwidth=0,
-    cursor="hand2",
-    command=lambda: cambiar_pantalla(frame_menu)
-).grid(
-    row=0,
-    column=2,
-    padx=10
+    padx=16
 )
 
 Button(
