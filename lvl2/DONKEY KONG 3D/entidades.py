@@ -296,6 +296,10 @@ class Jugador(Entity):
 
     def _atacar_con_martillo(self):
         self._atacando_martillo = True
+        try:
+            Audio('MovimientoMartillo.wav', autoplay=True, auto_destroy=True, volume=1.0)
+        except Exception:
+            pass
 
         def paso_1_caida():
             # El martillo ahora da un martillazo girando hacia abajo con la parte roja
@@ -394,6 +398,21 @@ class Jugador(Entity):
         for e in scene.entities:
             if getattr(e, 'type', None) == 'enemigo':
                 e.cayendo = True
+                
+                # Creamos el seguidor on-the-fly con update
+                class SeguidorCaida(Entity):
+                    def update(self):
+                        self.position = e.position
+                
+                s = SeguidorCaida(parent=scene)
+                camera.parent = s
+                camera.position = (0, 30, 0)    # 30 unidades por encima
+                camera.rotation = (90, 0, 0)    # Mirando directamente hacia abajo
+                
+                # Efecto oscurecer pantalla (fade to black)
+                pantalla_negra = Entity(parent=camera.ui, model='quad', color=color.clear, scale=(20, 20), z=-1)
+                pantalla_negra.animate_color(color.black, duration=2.0)
+                break
 
     def _recibir_danio(self):
         if self._invulnerable: return
