@@ -8,6 +8,8 @@ def maximizar_ventana():
     hwnd = ctypes.windll.user32.FindWindowW(None, "Donkey Kong 3D - Nivel 3")
     if hwnd:
         ctypes.windll.user32.ShowWindow(hwnd, 3)
+        window.clear_size()
+        window.clear_origin()
 
 invoke(maximizar_ventana, delay=1.5)
 
