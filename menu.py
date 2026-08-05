@@ -885,8 +885,46 @@ Label(
     bg="#0D0D1A",
     fg="#00F0FF"
 ).pack(
-    pady=(0, 25)
+    pady=(0, 15)
 )
+
+# ==========================================================
+# TARJETA INFORMATIVA DEL SISTEMA DE PUNTUACIÓN
+# ==========================================================
+frame_puntos_info = Frame(
+    menu_centro,
+    bg="#121224",
+    highlightthickness=1,
+    highlightbackground="#00F0FF",
+    bd=0,
+    padx=16,
+    pady=10
+)
+frame_puntos_info.pack(pady=(0, 20), fill="x")
+
+Label(
+    frame_puntos_info,
+    text="🏆 SISTEMA DE PUNTUACIÓN 🏆",
+    font=("Trebuchet MS", 12, "bold"),
+    bg="#121224",
+    fg="#FFD700"
+).pack(pady=(0, 5))
+
+texto_reglas = (
+    "• Saltar sobre un barril u obstáculo:   +100 PTS\n"
+    "• Destruir barril / enemigo con martillo: +500 PTS\n"
+    "• Completar y ganar el Nivel:             +1,000 PTS\n"
+    "• La puntuación se acumula entre niveles progresivos"
+)
+
+Label(
+    frame_puntos_info,
+    text=texto_reglas,
+    font=("Trebuchet MS", 10),
+    justify="left",
+    bg="#121224",
+    fg="#E2E8F0"
+).pack(anchor="w", padx=5)
 
 
 # ==========================================================

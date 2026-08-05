@@ -17,7 +17,7 @@ _tiempo_inicio_partida = None
 # CONSTANTES
 # ==========================================
 PUNTUACION_INICIAL = 0
-SALUD_INICIAL = 2.0 # Corazones
+SALUD_INICIAL = 3.0 # Corazones (3 Vidas)
 TIEMPO_MARTILLO_MAX = 15.0
 PUNTOS_POR_BARRIL = 500
 PUNTOS_SALTAR_BARRIL = 100
@@ -179,7 +179,6 @@ class GameManager(Entity):
         self.salud_jugador = SALUD_INICIAL
         self.martillo_activo = False
         self.tiempo_martillo = 0.0
-        self.temporizador_puntos = PENALIZACION_TIEMPO
         self.muerto = False
         self.juego_terminado = False
         
