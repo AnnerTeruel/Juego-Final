@@ -115,13 +115,13 @@ class Jugador(Entity):
 
         # Pivot emparentado a la CÁMARA, esquina inferior derecha estilo FPS
         # Empieza oculto; solo se activa cuando el jugador recoge un martillo
-        self.pivot_martillo = Entity(parent=camera, position=(0.83, -1.02, 0.81), enabled=False)
+        self.pivot_martillo = Entity(parent=camera, position=(0.5, -1.25, 0.5), enabled=False)
         self.martillo_rotador = Entity(parent=self.pivot_martillo, rotation=(-189, 103, 188))
         self.martillo_actual = Entity(
             parent=self.martillo_rotador, 
             model='toy_hammer.glb', 
             color=color.yellow, 
-            scale=0.0015, 
+            scale=0.0005, 
             y=1.34
         )
 
@@ -202,6 +202,14 @@ class Jugador(Entity):
     def update(self):
         if self._ganando or pausa.esta_pausado() or getattr(self, '_en_cinematica', False): return
         dt = time.dt
+
+        if getattr(self, 'tiene_martillo', False):
+            self.tiempo_restante_martillo -= dt
+            if self.tiempo_restante_martillo <= 0:
+                self._perder_martillo()
+            else:
+                if hasattr(self, 'texto_martillo') and self.texto_martillo:
+                    self.texto_martillo.text = f'MARTILLO: {int(self.tiempo_restante_martillo)}s'
 
         # Vista de ratón
         if camera.parent == self:
@@ -310,13 +318,13 @@ class Jugador(Entity):
                         
                         self.tiene_martillo = True
                         self.pivot_martillo.enabled = True
-                        self.texto_martillo.text = 'MARTILLO: ACTIVO'
+                        self.tiempo_restante_martillo = 10.0
+                        self.texto_martillo.text = f'MARTILLO: {int(self.tiempo_restante_martillo)}s'
                         self.texto_martillo.color = color.hex('#FFD700')
                         
                         if hasattr(self, '_timer_martillo') and self._timer_martillo:
                             try: destroy(self._timer_martillo)
                             except: pass
-                        self._timer_martillo = invoke(self._perder_martillo, delay=10)
                         break
                 except (AssertionError, Exception):
                     continue

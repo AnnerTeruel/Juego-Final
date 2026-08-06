@@ -77,10 +77,9 @@ def abrir_pausa(fuerza=False):
     global _menu_actual
     if _menu_actual is not None and not fuerza: return
     menu = _crear_menu('PAUSA', color.hex('#FFD700'))
-    _boton(menu, 'CONTINUAR', (0, 0.16), cerrar_menu)
-    _boton(menu, 'REINICIAR', (0, 0.03), lambda: _ejecutar(_reinicio_nivel_ref))
-    _boton(menu, 'OPCIONES', (0, -0.10), abrir_opciones)
-    _boton(menu, 'SALIR', (0, -0.23), application.quit)
+    _boton(menu, 'CONTINUAR', (0, 0.10), cerrar_menu)
+    _boton(menu, 'REINICIAR', (0, -0.05), lambda: _ejecutar(_reinicio_nivel_ref))
+    _boton(menu, 'SALIR', (0, -0.20), application.quit)
 
 def mostrar_game_over():
     menu = _crear_menu('GAME OVER', color.hex('#FF0055'))

@@ -13,15 +13,11 @@
   },
   {
     "id": 2,
-    "nombre": "d",
-    "puntos": 3900,
-    "tiempo": 10.0,
-    "nivel": 1,
-    "posicion": [
-      7.9,
-      0.3,
-      -0.1
-    ]
+    "nombre": "Dni",
+    "puntos": 9800,
+    "tiempo": 0,
+    "nivel": 2,
+    "posicion": null
   },
   {
     "id": 3,
@@ -33,6 +29,18 @@
   },
   {
     "id": 4,
+    "nombre": "d",
+    "puntos": 3900,
+    "tiempo": 10.0,
+    "nivel": 1,
+    "posicion": [
+      7.9,
+      0.3,
+      -0.1
+    ]
+  },
+  {
+    "id": 5,
     "nombre": "111",
     "puntos": 1211,
     "tiempo": 0,
@@ -40,7 +48,19 @@
     "posicion": null
   },
   {
-    "id": 5,
+    "id": 6,
+    "nombre": "Anner",
+    "puntos": 200,
+    "tiempo": 53.3,
+    "nivel": 1,
+    "posicion": [
+      22.4,
+      60.3,
+      2.4
+    ]
+  },
+  {
+    "id": 7,
     "nombre": "Jugador",
     "puntos": 0,
     "tiempo": 4.1,
