@@ -319,7 +319,7 @@ class Jugador(FirstPersonController):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.position = POSICION_INICIAL_JUGADOR
-        self.position = POSICION_INICIAL_JUGADOR
+        self.speed = 3.5 # Velocidad reducida (default es 5)
         
         # FOV Natural FPS (75) para evitar distorsión visual
         camera.fov = 75
