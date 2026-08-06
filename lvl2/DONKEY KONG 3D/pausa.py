@@ -90,5 +90,5 @@ def mostrar_game_over():
 def mostrar_victoria(puntos):
     menu = _crear_menu('VICTORIA', color.hex('#00FF66'))
     Text(parent=menu, text=f'PUNTOS: {puntos}', font='assets/PressStart2P-Regular.ttf', origin=(0, 0), position=(0, 0.15), scale=1.0, color=color.hex('#FFD700'), z=-0.01)
-    _boton(menu, 'SIGUIENTE', (0, -0.05), lambda: _ejecutar(_siguiente_nivel_ref, puntos))
+    _boton(menu, 'MENU', (0, -0.05), lambda: _ejecutar(_siguiente_nivel_ref, puntos))
     _boton(menu, 'SALIR', (0, -0.20), application.quit)

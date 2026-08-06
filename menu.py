@@ -250,26 +250,13 @@ def centrar_todo():
 
 
 def formatear_tiempo(segundos):
-    minutos = int(segundos) // 60
-    segundos_restantes = int(segundos) % 60
-    return f"{minutos:02d}:{segundos_restantes:02d}"
-
-
-def formatear_posicion(posicion):
-    if isinstance(posicion, dict):
-        x = posicion.get('x', 0)
-        y = posicion.get('y', 0)
-        z = posicion.get('z', 0)
-    else:
-        try:
-            x, y, z = posicion[:3]
-        except (TypeError, ValueError, IndexError):
-            x, y, z = 0, 0, 0
-
     try:
-        return f"X:{float(x):.1f} Y:{float(y):.1f} Z:{float(z):.1f}"
-    except (TypeError, ValueError):
-        return "X:0.0 Y:0.0 Z:0.0"
+        s = float(segundos or 0)
+        minutos = int(s) // 60
+        segundos_restantes = int(s) % 60
+        return f"{minutos:02d}:{segundos_restantes:02d}"
+    except (ValueError, TypeError):
+        return "00:00"
 
 
 def cargar_estadisticas():
@@ -285,7 +272,7 @@ def cargar_estadisticas():
         return []
 
 
-def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
+def guardar_estadistica(nombre, puntos, tiempo, nivel):
     try:
         registros = cargar_estadisticas()
         nombre_clean = str(nombre).strip().lower()
@@ -302,8 +289,6 @@ def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
                 existente['puntos'] = puntos
                 existente['nivel'] = max(nivel, existente.get('nivel', 1))
                 existente['tiempo'] = tiempo
-                if posicion:
-                    existente['posicion'] = posicion
             elif nivel > existente.get('nivel', 1):
                 existente['nivel'] = nivel
         else:
@@ -312,8 +297,7 @@ def guardar_estadistica(nombre, puntos, tiempo, nivel, posicion=None):
                 'nombre': nombre,
                 'puntos': puntos,
                 'tiempo': tiempo,
-                'nivel': nivel,
-                'posicion': posicion
+                'nivel': nivel
             }
             registros.append(nuevo)
 
@@ -341,8 +325,7 @@ def refrescar_tabla_estadisticas():
             indice,
             registro.get('nombre', ''),
             registro.get('puntos', 0),
-            formatear_tiempo(registro.get('tiempo', 0)),
-            formatear_posicion(registro.get('posicion'))
+            formatear_tiempo(registro.get('tiempo', 0))
         )
 
         if id_registro is None:
@@ -445,8 +428,27 @@ def abrir_dialogo_nombre(numero=None):
         if nombre == placeholder:
             nombre = ""
         nombre = nombre or "Jugador"
+        
+        # Reiniciar el progreso al ingresar un nombre para empezar desde el Nivel 1
+        st = cargar_estado_niveles()
+        st['nivel2'] = False
+        st['nivel3'] = False
+        guardar_estado_niveles(st)
+        
         nombre_jugador_actual = nombre
+        # Guardar nombre en session.json para que los niveles lo lean
+        try:
+            ruta_session = CARPETA_PROYECTO / 'session.json'
+            with open(ruta_session, 'w', encoding='utf-8') as f:
+                json.dump({'nombre': nombre}, f)
+        except Exception:
+            pass
         dialogo.destroy()
+        
+        # Redibujar la pantalla de niveles para que el bloqueo se vea reflejado
+        try: dibujar_niveles()
+        except Exception: pass
+        
         if numero is not None:
             iniciar_nivel(numero)
         else:
@@ -1079,80 +1081,115 @@ def iniciar_nivel(numero):
         ruta_script = CARPETA_PROYECTO / f"level{numero}.py"
         directorio_trabajo = CARPETA_PROYECTO
 
-    args = [sys.executable, str(ruta_script)]
-    if nombre_jugador_actual:
-        args.append(nombre_jugador_actual)
+    # Todos los niveles solo reciben puntos iniciales como argumento numérico
+    # El nombre se lee de session.json directamente por cada nivel
+    if numero == 2:
+        args = [sys.executable, str(ruta_script), '0']
+    else:
+        args = [sys.executable, str(ruta_script)]
 
     alto = max(ventana.winfo_height(), 1)
 
     def on_curtain_closed():
         detener_musica_menu()
-        # Ejecutar el nivel en un hilo para no bloquear la UI
         def run_level():
             try:
                 subprocess.run(args, cwd=str(directorio_trabajo), creationflags=0x08000000)
             except Exception as e:
                 print(f"Error ejecutando nivel: {e}")
-
-            # Al terminar, abrir la cortina (animación de salida) en el hilo UI
-            ventana.after(0, lambda: animar_cortina_vertical(0, alto, on_level_finished))
-
+            ventana.after(0, _procesar_resultado)
         threading.Thread(target=run_level, daemon=True).start()
 
-    def on_level_finished():
-        # Mostrar lanzador y asegurar que esté maximizado
+    def _mostrar_menu():
+        """Muestra el menú principal tras terminar todos los niveles."""
+        global transicion_activa
+        # Quitar la cortina negra que quedó de la transición al lanzar el nivel
+        try:
+            cortina_transicion.place_forget()
+            transicion_activa = False
+        except Exception: pass
         reproducir_musica_menu()
         try:
             ventana.deiconify()
-            try:
-                ventana.state("zoomed")
+            try: ventana.state("zoomed")
             except Exception:
-                # fallback: maximize by geometry
                 try:
                     ancho = ventana.winfo_screenwidth()
-                    alto = ventana.winfo_screenheight()
-                    ventana.geometry(f"{ancho}x{alto}+0+0")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        # Procesar resultado si existe
-        if RUTA_RUN_RESULT.exists():
-            try:
-                with open(RUTA_RUN_RESULT, 'r', encoding='utf-8') as archivo:
-                    resultado = json.load(archivo)
-                if resultado:
-                    if 'nivel_desbloqueado' in resultado:
-                        desb = resultado['nivel_desbloqueado']
-                        st = cargar_estado_niveles()
-                        if desb == 2: st['nivel2'] = True
-                        elif desb == 3: st['nivel3'] = True
-                        guardar_estado_niveles(st)
-                    
-                    guardar_estadistica(
-                        resultado.get('nombre', nombre_jugador_actual or 'Jugador'),
-                        resultado.get('puntos', 0),
-                        resultado.get('tiempo', 0),
-                        resultado.get('nivel', numero),
-                        resultado.get('posicion')
-                    )
-                    refrescar_tabla_estadisticas()
-            except Exception as error:
-                print(f"Error leyendo resultado de nivel: {error}")
-            finally:
-                try:
-                    RUTA_RUN_RESULT.unlink()
-                except Exception:
-                    pass
-
+                    alt_v = ventana.winfo_screenheight()
+                    ventana.geometry(f"{ancho}x{alt_v}+0+0")
+                except Exception: pass
+        except Exception: pass
         try:
             cambiar_pantalla(frame_juego)
             dibujar_niveles()
-        except Exception:
-            pass
+        except Exception: pass
 
-    # Iniciar animación de cortina para cubrir la ventana y ejecutar el nivel
+    def _lanzar_nivel2(puntos_ini):
+        """Lanza el Nivel 2 silenciosamente sin mostrar el menú."""
+        ventana.withdraw()
+        ruta_lvl2 = CARPETA_PROYECTO / "lvl2" / "DONKEY KONG 3D" / "main.py"
+        dir_lvl2 = CARPETA_PROYECTO / "lvl2" / "DONKEY KONG 3D"
+        args_lvl2 = [sys.executable, str(ruta_lvl2), str(puntos_ini)]
+        def run_lvl2():
+            try:
+                subprocess.run(args_lvl2, cwd=str(dir_lvl2), creationflags=0x08000000)
+            except Exception as e:
+                print(f"Error ejecutando nivel 2: {e}")
+            ventana.after(0, _procesar_resultado)
+        threading.Thread(target=run_lvl2, daemon=True).start()
+
+    def _procesar_resultado():
+        """Procesa run_result.json al terminar cualquier nivel."""
+        # Leer nombre desde session.json — fuente de verdad
+        nombre_final = nombre_jugador_actual or 'Jugador'
+        try:
+            ruta_session = CARPETA_PROYECTO / 'session.json'
+            if ruta_session.exists():
+                dato = json.load(open(ruta_session, 'r', encoding='utf-8'))
+                nombre_final = dato.get('nombre') or nombre_final
+        except Exception: pass
+
+        if not RUTA_RUN_RESULT.exists():
+            _mostrar_menu()
+            return
+
+        try:
+            resultado = json.load(open(RUTA_RUN_RESULT, 'r', encoding='utf-8'))
+            nivel_que_termino = resultado.get('nivel', numero)
+            puntos = resultado.get('puntos', 0)
+
+            # Si el Nivel 1 terminó con éxito → desbloquear Nivel 2 y lanzarlo SIN mostrar menú
+            if nivel_que_termino == 1 and resultado.get('nivel_desbloqueado') == 2:
+                try: RUTA_RUN_RESULT.unlink()
+                except Exception: pass
+                st = cargar_estado_niveles()
+                st['nivel2'] = True
+                guardar_estado_niveles(st)
+                _lanzar_nivel2(puntos)
+                return  # El menú aparecerá cuando termine el Nivel 2
+
+            # Cualquier otro final → guardar estadística y mostrar menú
+            if nivel_que_termino == 2:
+                st = cargar_estado_niveles()
+                st['nivel2'] = True
+                guardar_estado_niveles(st)
+
+            guardar_estadistica(nombre_final, puntos,
+                                resultado.get('tiempo', 0),
+                                nivel_que_termino)
+            refrescar_tabla_estadisticas()
+
+        except Exception as error:
+            print(f"Error leyendo resultado: {error}")
+        finally:
+            try: RUTA_RUN_RESULT.unlink()
+            except Exception: pass
+
+        _mostrar_menu()
+
+    def on_level_finished():
+        _procesar_resultado()
+
     animar_cortina_vertical(-alto, 0, on_curtain_closed)
 
 
@@ -1561,8 +1598,7 @@ columnas = (
     "puesto",
     "nombre",
     "puntuacion",
-    "tiempo",
-    "posicion"
+    "tiempo"
 )
 
 tabla_estadisticas = ttk.Treeview(
@@ -1612,11 +1648,6 @@ tabla_estadisticas.heading(
     text="Tiempo jugado"
 )
 
-tabla_estadisticas.heading(
-    "posicion",
-    text="Posicion"
-)
-
 tabla_estadisticas.column(
     "puesto",
     width=85,
@@ -1643,16 +1674,8 @@ tabla_estadisticas.column(
 
 tabla_estadisticas.column(
     "tiempo",
-    width=205,
+    width=250,
     minwidth=150,
-    anchor="center",
-    stretch=False
-)
-
-tabla_estadisticas.column(
-    "posicion",
-    width=300,
-    minwidth=200,
     anchor="center",
     stretch=False
 )

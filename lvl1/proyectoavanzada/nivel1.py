@@ -981,15 +981,29 @@ class MenuVictoria(Entity):
     def accion_reiniciar(self):
         reproducir_clic()
         self.enabled = False
-        invoke(reiniciar_juego, delay=0.1) # Retraso mínimo para permitir que el sonido inicie antes de congelar el juego
+        invoke(reiniciar_juego, delay=0.1) 
 
     def accion_siguiente(self):
         reproducir_clic()
         pts = game_manager.puntuacion
         try:
+            import time as _time
+            from pathlib import Path
             ruta_res = Path(__file__).resolve().parent.parent.parent / 'run_result.json'
+            # Tiempo jugado en este nivel
+            tiempo_jugado = round(_time.time() - (_tiempo_inicio_partida or _time.time()), 1)
+            # Leer nombre desde session.json
+            nombre = 'Jugador'
+            try:
+                ruta_session = Path(__file__).resolve().parent.parent.parent / 'session.json'
+                if ruta_session.exists():
+                    import json as _j
+                    nombre = _j.load(open(ruta_session, 'r', encoding='utf-8')).get('nombre', 'Jugador') or 'Jugador'
+            except Exception:
+                pass
             with open(ruta_res, 'w', encoding='utf-8') as f:
-                json.dump({'puntos': pts, 'nivel_desbloqueado': 2, 'nivel': 1}, f)
+                json.dump({'puntos': pts, 'nivel_desbloqueado': 2, 'nivel': 1,
+                           'nombre': nombre, 'tiempo': tiempo_jugado}, f)
         except Exception as err:
             print("Error al guardar resultado Nivel 1:", err)
         application.quit()
@@ -1685,5 +1699,7 @@ if __name__ == '__main__':
         print("No se pudo cargar el soundtrack:", e)
         soundtrack = None
         
+    import time as _time
+    _tiempo_inicio_partida = _time.time()
     iniciar_intro()
     app.run()
