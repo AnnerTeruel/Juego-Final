@@ -51,15 +51,15 @@ def construir_nivel():
     y_levels = [-11.5, -6.5, -1.5, 3.5, 8.5, 13.5, 18.5, 23.5, 28.5, 33.5]
     
     escaleras_por_piso = {
-        0: [-20, 0, 20],   # De piso 0 a 1
-        1: [-10, 10],      # De piso 1 a 2
-        2: [-20, 0, 20],   # De piso 2 a 3
-        3: [-10, 10],      # De piso 3 a 4
-        4: [-20, 0, 20],   # De piso 4 a 5
-        5: [-10, 10],      # De piso 5 a 6
-        6: [-20, 0, 20],   # De piso 6 a 7
-        7: [-10, 10],      # De piso 7 a 8
-        8: [-20, 20]       # De piso 8 a 9
+        0: [-26, 26],   # De piso 0 a 1  → esquinas
+        1: [0],         # De piso 1 a 2  → centro
+        2: [-26, 26],   # De piso 2 a 3  → esquinas
+        3: [0],         # De piso 3 a 4  → centro
+        4: [-26, 26],   # De piso 4 a 5  → esquinas
+        5: [0],         # De piso 5 a 6  → centro
+        6: [-26, 26],   # De piso 6 a 7  → esquinas
+        7: [0],         # De piso 7 a 8  → centro
+        8: [-26, 26]    # De piso 8 a 9  → esquinas
     }
 
     # Crear los pisos con huecos donde suben las escaleras del piso inferior
